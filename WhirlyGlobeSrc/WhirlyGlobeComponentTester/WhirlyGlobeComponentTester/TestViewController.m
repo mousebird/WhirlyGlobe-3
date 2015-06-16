@@ -240,7 +240,7 @@ typedef enum {HighPerformance,LowPerformance} PerformanceMode;
         baseViewC.frameInterval = 3; // 20fps
         baseViewC.threadPerLayer = false;
     } else {
-        baseViewC.frameInterval = 2; // 30fps
+        baseViewC.frameInterval = 1; // 30fps
         baseViewC.threadPerLayer = true;
     }
     
@@ -1435,6 +1435,42 @@ static const int NumMegaMarkers = 15000;
                     self.title = @"Mapzen Vector Tiles";
                 } else
                     NSLog(@"Failed to load style sheet for Mapzen.");
+            } else if (![layerName compare:kMaplyGravitystormVectors])
+            {
+                [MaplyMapnikVectorTiles
+                 StartRemoteVectorTilesWithTileSpec:@"https://tile.thunderforest.com/thunderforest.transport-v1.json"
+                 accessToken:nil
+                 style:[[NSBundle mainBundle] pathForResource:@"osm-bright" ofType:@"xml"]
+                 styleType:MapnikXMLStyle
+                 cacheDir:thisCacheDir
+                 viewC:baseViewC
+                 success:
+                 ^(MaplyMapnikVectorTiles *vecTiles)
+                 {
+                     // Don't load the lowest levels for the globe
+                     if (globeViewC)
+                         vecTiles.minZoom = 5;
+                     
+                     // Note: These are set after the MapnikStyleSet has already been initialized
+                     MapnikStyleSet *styleSet = (MapnikStyleSet *)vecTiles.tileParser;
+                     styleSet.tileStyleSettings.markerImportance = 10.0;
+                     styleSet.tileStyleSettings.fontName = @"Gill Sans";
+                     
+                     // Now for the paging layer itself
+                     MaplyQuadPagingLayer *pageLayer = [[MaplyQuadPagingLayer alloc] initWithCoordSystem:[[MaplySphericalMercator alloc] initWebStandard] delegate:vecTiles];
+                     pageLayer.numSimultaneousFetches = 6;
+                     pageLayer.flipY = false;
+                     pageLayer.importance = 1024*1024*2;
+                     pageLayer.useTargetZoomLevel = true;
+                     pageLayer.singleLevelLoading = true;
+                     [baseViewC addLayer:pageLayer];
+                     ovlLayers[layerName] = pageLayer;
+                 }
+                 failure:
+                         ^(NSError *error){
+                             NSLog(@"Failed to load Mapnik vector tiles because: %@",error);
+                         }
+                 ];
             }
         } else if (!isOn && layer)
         {
