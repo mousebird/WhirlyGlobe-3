@@ -86,13 +86,13 @@
         MaplyVectorObject *vecObj = [[MaplyVectorObject alloc] initWithGeoJSON:data];
         if(vecObj) {
             MaplyComponentObject *obj1 = [baseViewC addWideVectors:@[vecObj]
-                                 desc: @{kMaplyColor: [UIColor colorWithRed:1 green:0 blue:0 alpha:1.0],
+                                 desc: @{kMaplyColor: [UIColor colorWithRed:1.0 green:0 blue:0 alpha:1.0],
                                          kMaplyFilled: @NO,
                                          kMaplyEnable: @YES,
                                          kMaplyFade: @0,
-                                         kMaplyDrawPriority: @(kMaplyVectorDrawPriorityDefault + 1),
+                                         kMaplyDrawPriority: @(kMaplyVectorDrawPriorityDefault),
                                          kMaplyVecCentered: @YES,
-                                         kMaplyVecTexture: lineTexture,
+//                                         kMaplyVecTexture: lineTexture,
                                          kMaplyWideVecEdgeFalloff: @(1.0),
                                          kMaplyWideVecJoinType: kMaplyWideVecMiterJoin,
                                          kMaplyWideVecCoordType: kMaplyWideVecCoordTypeScreen,
@@ -105,9 +105,9 @@
                                      kMaplyFilled: @NO,
                                      kMaplyEnable: @YES,
                                      kMaplyFade: @0,
-                                     kMaplyDrawPriority: @(kMaplyVectorDrawPriorityDefault),
+                                     kMaplyDrawPriority: @(kMaplyVectorDrawPriorityDefault+10),
                                      kMaplyVecCentered: @YES,
-                                     kMaplyVecWidth: @(1)}
+                                     kMaplyVecWidth: @(4)}
                              mode:MaplyThreadCurrent];
 
             return @[obj1,obj2];
@@ -120,7 +120,7 @@
 - (NSArray *)addGeoJson:(NSString*)name viewC:(MaplyBaseViewController *)viewC
 {
 //    return [self addGeoJson:name dashPattern:@[@8, @8] width:4 viewC:viewC];
-    return [self addGeoJson:name dashPattern:@[@8, @8] width:20 viewC:viewC];
+    return [self addGeoJson:name dashPattern:@[@8, @8] width:40 viewC:viewC];
 }
 
 - (NSArray *)addWideVectors:(MaplyVectorObject *)vecObj baseViewC: (MaplyBaseViewController*) baseViewC dashedLineTex: (MaplyTexture*) dashedLineTex filledLineTex: (MaplyTexture*) filledLineTex

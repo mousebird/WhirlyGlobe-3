@@ -120,7 +120,7 @@ void WideVectorDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo, Scene *scen
         } else {
             frameInfo.program->setUniform("u_w2", lineWidth);
             frameInfo.program->setUniform("u_real_w2", pixDispSize * lineWidth);
-            frameInfo.program->setUniform("u_edge", edgeSize);
+            frameInfo.program->setUniform("u_edge", edgeSize);            
         }
         float texScale = scale/(screenSize*texRepeat);
         frameInfo.program->setUniform("u_texScale", texScale);
@@ -177,7 +177,7 @@ static const char *vertexShaderTri =
 "uniform mat4  u_mvNormalMatrix;"
 "uniform float u_fade;\n"
 "uniform float u_w2;\n"
-"uniform float u_real_w2;\n"
+"uniform highp float u_real_w2;\n"
 "uniform float u_texScale;\n"
 "uniform vec4 u_color;\n"
 "\n"
@@ -190,6 +190,8 @@ static const char *vertexShaderTri =
 "attribute float a_c0;\n"
 "\n"
 "varying vec2 v_texCoord;\n"
+"varying vec3 v_position;\n"
+"varying vec3 v_realPos;\n"
 //"varying vec4 v_color;\n"
 "\n"
 "void main()\n"
@@ -199,6 +201,8 @@ static const char *vertexShaderTri =
 "   float t0 = a_c0 * u_real_w2;\n"
 "   t0 = clamp(t0,0.0,1.0);\n"
 "   vec3 realPos = (a_p1 - a_position) * t0 + a_n0 * u_real_w2 + a_position;\n"
+"   v_realPos = realPos;\n"
+"   v_position = a_position;\n"
 "   float texPos = ((a_texinfo.z - a_texinfo.y) * t0 + a_texinfo.y + a_texinfo.w * u_real_w2) * u_texScale;\n"
 "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
 "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
@@ -213,7 +217,6 @@ static const char *vertexGlobeShaderTri =
 "uniform mat4  u_mvNormalMatrix;"
 "uniform float u_fade;\n"
 "uniform float u_w2;\n"
-"uniform float u_real_w2;\n"
 "uniform float u_texScale;\n"
 "uniform vec4 u_color;\n"
 "\n"
@@ -254,10 +257,13 @@ static const char *fragmentShaderTriAlias =
 "uniform sampler2D s_baseMap0;\n"
 "uniform bool  u_hasTexture;\n"
 "uniform float u_w2;\n"
+"uniform highp float u_real_w2;\n"
 "uniform float u_edge;\n"
 "uniform vec4 u_color;\n"
 "\n"
-"varying vec2      v_texCoord;\n"
+"varying vec2 v_texCoord;\n"
+"varying vec3 v_position;\n"
+"varying vec3 v_realPos;\n"
 "\n"
 "void main()\n"
 "{\n"
@@ -268,7 +274,11 @@ static const char *fragmentShaderTriAlias =
 "    alpha = across/u_edge;\n"
 "  if (across > u_w2-u_edge)\n"
 "    alpha = (u_w2-across)/u_edge;\n"
-"  gl_FragColor = u_color * alpha * patternVal;\n"
+"  float dist = distance(v_position,v_realPos);\n"
+"  if (dist <= u_real_w2)\n"
+"     gl_FragColor = u_color * alpha * patternVal;\n"
+"  else\n"
+"     gl_FragColor = vec4(0.0,1.0,0.0,1.0);\n"
 "}\n"
 ;
 

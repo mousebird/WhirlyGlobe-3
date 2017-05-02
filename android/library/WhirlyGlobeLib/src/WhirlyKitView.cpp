@@ -18,6 +18,7 @@
  *
  */
 
+#import "WhirlyKitLog.h"
 #import "Platform.h"
 #import "WhirlyVector.h"
 #import "WhirlyKitView.h"
@@ -238,6 +239,9 @@ Point2d View::screenSizeInDisplayCoords(Point2f &frameSize)
     
     screenSize.x() = tan(fieldOfView/2.0) * heightAboveSurface() * 2.0;
     screenSize.y() = screenSize.x() / frameSize.x() * frameSize.y();
+    
+    WHIRLYKIT_LOGV("screenSize = (%f,%f), frameSize = (%f,%f)",screenSize.x(),screenSize.y(),frameSize.x(),frameSize.y());
+
     
     return screenSize;
 }

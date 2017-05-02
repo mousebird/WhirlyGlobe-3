@@ -18,6 +18,7 @@
  *
  */
 
+#import "WhirlyKitLog.h"
 #import "WideVectorDrawable.h"
 #import "OpenGLES2Program.h"
 #import "SceneRendererES.h"
@@ -122,6 +123,8 @@ void WideVectorDrawable::draw(RendererFrameInfo *frameInfo, Scene *scene)
             frameInfo->program->setUniform("u_w2", lineWidth);
             frameInfo->program->setUniform("u_real_w2", pixDispSize * lineWidth);
             frameInfo->program->setUniform("u_edge", edgeSize);
+            
+            WHIRLYKIT_LOGV("pixDispSize = %f, lineWidth = %f",pixDispSize,lineWidth);
         }
         float texScale = scale/(screenSize*texRepeat);
         frameInfo->program->setUniform("u_texScale", texScale);
