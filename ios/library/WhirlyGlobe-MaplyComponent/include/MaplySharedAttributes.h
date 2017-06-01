@@ -202,9 +202,8 @@ extern NSString* const kMaplyWideVecJoinType;
 
 /// Widened vectors are joined with miters
 extern NSString* const kMaplyWideVecMiterJoin;
-// Note: Not yet implemented
 /// Widened vectors are joined with a curve
-//extern NSString* const kMaplyWideVecRoundJoin @"round"
+extern NSString* const kMaplyWideVecRoundJoin;
 /// Widened vectors are joined with a bevel
 extern NSString* const kMaplyWideVecBevelJoin;
 
@@ -213,16 +212,16 @@ extern NSString* const kMaplyWideVecEdgeFalloff;
 
 /// For wide vectors we can control the ends
 /// See: http://www.w3.org/TR/SVG/painting.html#StrokeLinecapProperty
-//extern NSString* const kMaplyWideVecLineCapType @"wideveclinecaptype"
+extern NSString* const kMaplyWideVecLineCapType;
 
 // Note: These are not currently implemented
 
-/// Widened vector ends are flush
-//extern NSString* const kMaplyWideVecButtCap;
+/// Widened vector ends are flush - default
+extern NSString* const kMaplyWideVecButtCap;
 /// Widened vector ends are round (e.g. hot dog roads)
-//extern NSString* const kMaplyWideVecRoundCap;
+extern NSString* const kMaplyWideVecRoundCap;
 /// Widened vector ends are extended a bit and then flush
-//extern NSString* const kMaplyWideVecSquareCap;
+extern NSString* const kMaplyWideVecSquareCap;
 
 /// Miter joins will turn to bevel joins past this number of degrees
 extern NSString* const kMaplyWideVecMiterLimit;

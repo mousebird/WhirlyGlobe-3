@@ -310,11 +310,11 @@ static const char *fragmentGlobeShaderTriAlias =
 
 WhirlyKit::OpenGLES2Program *BuildWideVectorProgram()
 {
-    OpenGLES2Program *shader = new OpenGLES2Program(kWideVectorShaderName,vertexShaderTri,fragmentShaderTriAlias);
-    if (!shader->isValid())
+    OpenGLES2Program *angleShader = new OpenGLES2Program(kWideVectorShaderName,vertexShaderTri,fragmentShaderTriAlias);
+    if (!angleShader->isValid())
     {
-        delete shader;
-        shader = NULL;
+        delete angleShader;
+        angleShader = NULL;
     }
     
     // Set some reasonable defaults
