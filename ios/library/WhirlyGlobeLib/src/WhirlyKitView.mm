@@ -235,7 +235,7 @@ using namespace Eigen;
 {
   double mapWidthInMeters = (2 * self.heightAboveSurface *  tan(_fieldOfView/2.0) * EarthRadius);
   double metersPerPizel = mapWidthInMeters/frameSize.x();
-  double zoom = log2(EarthRadius * RadToDeg(cos(latitude))/ metersPerPizel) - 8;
+  double zoom = log2(EarthRadius * cos(latitude)/ metersPerPizel) - 8;
   
   return zoom;
 }
