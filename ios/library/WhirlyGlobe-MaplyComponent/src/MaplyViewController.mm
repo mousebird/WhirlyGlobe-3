@@ -3,7 +3,7 @@
  *  MaplyComponent
  *
  *  Created by Steve Gifford on 9/6/12.
- *  Copyright 2012-2015 mousebird consulting
+ *  Copyright 2012-2017 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ using namespace Maply;
     return newState;
 }
 
-- (bool) isEqual:(id)object
+- (BOOL) isEqual:(id)object
 {
     if (![object isKindOfClass:[MaplyViewControllerAnimationState class]])
         return false;
