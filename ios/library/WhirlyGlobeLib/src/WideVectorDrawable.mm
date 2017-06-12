@@ -177,7 +177,7 @@ static const char *vertexShaderTri =
 "uniform mat4  u_mvNormalMatrix;"
 "uniform float u_fade;\n"
 "uniform float u_w2;\n"
-"uniform highp float u_real_w2;\n"
+"uniform float u_real_w2;\n"
 "uniform float u_texScale;\n"
 "uniform vec4 u_color;\n"
 "\n"
@@ -190,8 +190,6 @@ static const char *vertexShaderTri =
 "attribute float a_c0;\n"
 "\n"
 "varying vec2 v_texCoord;\n"
-"varying vec3 v_position;\n"
-"varying vec3 v_realPos;\n"
 //"varying vec4 v_color;\n"
 "\n"
 "void main()\n"
@@ -201,8 +199,6 @@ static const char *vertexShaderTri =
 "   float t0 = a_c0 * u_real_w2;\n"
 "   t0 = clamp(t0,0.0,1.0);\n"
 "   vec3 realPos = (a_p1 - a_position) * t0 + a_n0 * u_real_w2 + a_position;\n"
-"   v_realPos = realPos;\n"
-"   v_position = a_position;\n"
 "   float texPos = ((a_texinfo.z - a_texinfo.y) * t0 + a_texinfo.y + a_texinfo.w * u_real_w2) * u_texScale;\n"
 "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
 "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
@@ -217,6 +213,7 @@ static const char *vertexGlobeShaderTri =
 "uniform mat4  u_mvNormalMatrix;"
 "uniform float u_fade;\n"
 "uniform float u_w2;\n"
+"uniform float u_real_w2;\n"
 "uniform float u_texScale;\n"
 "uniform vec4 u_color;\n"
 "\n"
@@ -257,13 +254,10 @@ static const char *fragmentShaderTriAlias =
 "uniform sampler2D s_baseMap0;\n"
 "uniform bool  u_hasTexture;\n"
 "uniform float u_w2;\n"
-"uniform highp float u_real_w2;\n"
 "uniform float u_edge;\n"
 "uniform vec4 u_color;\n"
 "\n"
-"varying vec2 v_texCoord;\n"
-"varying vec3 v_position;\n"
-"varying vec3 v_realPos;\n"
+"varying vec2      v_texCoord;\n"
 "\n"
 "void main()\n"
 "{\n"
@@ -274,11 +268,7 @@ static const char *fragmentShaderTriAlias =
 "    alpha = across/u_edge;\n"
 "  if (across > u_w2-u_edge)\n"
 "    alpha = (u_w2-across)/u_edge;\n"
-"  float dist = distance(v_position,v_realPos);\n"
-"  if (dist <= u_real_w2)\n"
-"     gl_FragColor = u_color * alpha * patternVal;\n"
-"  else\n"
-"     gl_FragColor = vec4(0.0,1.0,0.0,1.0);\n"
+"  gl_FragColor = u_color * alpha * patternVal;\n"
 "}\n"
 ;
 
@@ -307,32 +297,137 @@ static const char *fragmentGlobeShaderTriAlias =
 "  gl_FragColor = (v_dot > 0.0 ? u_color * alpha * patternVal : vec4(0.0,0.0,0.0,0.0));\n"
 "}\n"
 ;
+    
+    static const char *vertexShaderCurveTri =
+    "uniform mat4  u_mvpMatrix;\n"
+    "uniform mat4  u_mvMatrix;"
+    "uniform mat4  u_mvNormalMatrix;"
+    "uniform float u_fade;\n"
+    "uniform float u_w2;\n"
+    "uniform float u_real_w2;\n"
+    "uniform float u_texScale;\n"
+    "uniform vec4 u_color;\n"
+    "\n"
+    "attribute vec3 a_position;\n"
+    "attribute vec3 a_normal;\n"
+    "attribute vec4 a_texinfo;\n"
+    //"attribute vec4 a_color;\n"
+    "attribute vec3 a_p1;\n"
+    "attribute vec3 a_n0;\n"
+    "attribute float a_c0;\n"
+    "\n"
+    "varying vec2 v_texCoord;\n"
+    //"varying vec4 v_color;\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    //"   v_color = a_color;\n"
+    //  Position along the line
+    "   float t0 = a_c0 * u_real_w2;\n"
+    "   t0 = clamp(t0,0.0,1.0);\n"
+    "   vec3 realPos = (a_p1 - a_position) * t0 + a_n0 * u_real_w2 + a_position;\n"
+    "   float texPos = ((a_texinfo.z - a_texinfo.y) * t0 + a_texinfo.y + a_texinfo.w * u_real_w2) * u_texScale;\n"
+    "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
+    "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
+    "   screenPos /= screenPos.w;\n"
+    "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
+    "}\n"
+    ;
+    
+    static const char *vertexGlobeShaderCurveTri =
+    "uniform mat4  u_mvpMatrix;\n"
+    "uniform mat4  u_mvMatrix;"
+    "uniform mat4  u_mvNormalMatrix;"
+    "uniform float u_fade;\n"
+    "uniform float u_w2;\n"
+    "uniform float u_real_w2;\n"
+    "uniform float u_texScale;\n"
+    "uniform vec4 u_color;\n"
+    "\n"
+    "attribute vec3 a_position;\n"
+    "attribute vec3 a_normal;\n"
+    "attribute vec4 a_texinfo;\n"
+    //"attribute vec4 a_color;\n"
+    "attribute vec3 a_p1;\n"
+    "attribute vec3 a_n0;\n"
+    "attribute float a_c0;\n"
+    "\n"
+    "varying vec2 v_texCoord;\n"
+    //"varying vec4 v_color;\n"
+    "varying float      v_dot;\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    //"   v_color = a_color;\n"
+    //  Position along the line
+    "   float t0 = a_c0 * u_real_w2;\n"
+    "   t0 = clamp(t0,0.0,1.0);\n"
+    "   vec3 realPos = (a_p1 - a_position) * t0 + a_n0 * u_real_w2 + a_position;\n"
+    "   vec4 pt = u_mvMatrix * vec4(a_position,1.0);\n"
+    "   pt /= pt.w;\n"
+    "   vec4 testNorm = u_mvNormalMatrix * vec4(a_normal,0.0);\n"
+    "   v_dot = dot(-pt.xyz,testNorm.xyz);\n"
+    "   float texPos = ((a_texinfo.z - a_texinfo.y) * t0 + a_texinfo.y + a_texinfo.w * u_real_w2) * u_texScale;\n"
+    "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
+    "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
+    "   screenPos /= screenPos.w;\n"
+    "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
+    "}\n"
+    ;
+    
+    static const char *fragmentShaderCurveTriAlias =
+    "precision mediump float;\n"
+    "\n"
+    "uniform sampler2D s_baseMap0;\n"
+    "uniform bool  u_hasTexture;\n"
+    "uniform float u_w2;\n"
+    "uniform float u_edge;\n"
+    "uniform vec4 u_color;\n"
+    "\n"
+    "varying vec2      v_texCoord;\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
+    "  float alpha = 1.0;\n"
+    "  float across = v_texCoord.x * u_w2;\n"
+    "  if (across < u_edge)\n"
+    "    alpha = across/u_edge;\n"
+    "  if (across > u_w2-u_edge)\n"
+    "    alpha = (u_w2-across)/u_edge;\n"
+    "  gl_FragColor = u_color * alpha * patternVal;\n"
+    "}\n"
+    ;
+    
+    static const char *fragmentGlobeShaderCurveTriAlias =
+    "precision mediump float;\n"
+    "\n"
+    "uniform sampler2D s_baseMap0;\n"
+    "uniform bool  u_hasTexture;\n"
+    "uniform float u_w2;\n"
+    "uniform float u_edge;\n"
+    "uniform vec4 u_color;\n"
+    "\n"
+    "varying vec2      v_texCoord;\n"
+    "varying float      v_dot;\n"
+    //"varying vec4      v_color;\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
+    "  float alpha = 1.0;\n"
+    "  float across = v_texCoord.x * u_w2;\n"
+    "  if (across < u_edge)\n"
+    "    alpha = across/u_edge;\n"
+    "  if (across > u_w2-u_edge)\n"
+    "    alpha = (u_w2-across)/u_edge;\n"
+    "  gl_FragColor = (v_dot > 0.0 ? u_color * alpha * patternVal : vec4(0.0,0.0,0.0,0.0));\n"
+    "}\n"
+    ;
 
-WhirlyKit::OpenGLES2Program *BuildWideVectorProgram()
+WhirlyKit::OpenGLES2Program *BuildWideVectorAngleProgram()
 {
-    OpenGLES2Program *angleShader = new OpenGLES2Program(kWideVectorShaderName,vertexShaderTri,fragmentShaderTriAlias);
-    if (!angleShader->isValid())
-    {
-        delete angleShader;
-        angleShader = NULL;
-    }
-    
-    // Set some reasonable defaults
-    if (shader)
-    {
-        glUseProgram(shader->getProgram());
-        
-        shader->setUniform("u_length", 10.f/1024);
-        shader->setUniform("u_texScale", 1.f);
-    }
-    
-    
-    return shader;
-}
-
-WhirlyKit::OpenGLES2Program *BuildWideVectorGlobeProgram()
-{
-    OpenGLES2Program *shader = new OpenGLES2Program(kWideVectorGlobeShaderName,vertexGlobeShaderTri,fragmentGlobeShaderTriAlias);
+    OpenGLES2Program *shader = new OpenGLES2Program(kWideVectorAngleShaderName,vertexShaderTri,fragmentShaderTriAlias);
     if (!shader->isValid())
     {
         delete shader;
@@ -348,10 +443,71 @@ WhirlyKit::OpenGLES2Program *BuildWideVectorGlobeProgram()
         shader->setUniform("u_texScale", 1.f);
     }
     
+    return shader;
+}
+
+WhirlyKit::OpenGLES2Program *BuildWideVectorCurveProgram()
+{
+    OpenGLES2Program *shader = new OpenGLES2Program(kWideVectorCurveShaderName,vertexShaderCurveTri,fragmentShaderCurveTriAlias);
+    if (!shader->isValid())
+    {
+        delete shader;
+        shader = NULL;
+    }
+    
+    // Set some reasonable defaults
+    if (shader)
+    {
+        glUseProgram(shader->getProgram());
+        
+        shader->setUniform("u_length", 10.f/1024);
+        shader->setUniform("u_texScale", 1.f);
+    }
     
     return shader;
 }
 
+WhirlyKit::OpenGLES2Program *BuildWideVectorAngleGlobeProgram()
+{
+    OpenGLES2Program *shader = new OpenGLES2Program(kWideVectorAngleGlobeShaderName,vertexGlobeShaderTri,fragmentGlobeShaderTriAlias);
+    if (!shader->isValid())
+    {
+        delete shader;
+        shader = NULL;
+    }
     
+    // Set some reasonable defaults
+    if (shader)
+    {
+        glUseProgram(shader->getProgram());
+        
+        shader->setUniform("u_length", 10.f/1024);
+        shader->setUniform("u_texScale", 1.f);
+    }
+    
+    return shader;
+}
+
+WhirlyKit::OpenGLES2Program *BuildWideVectorCurveGlobeProgram()
+{
+    OpenGLES2Program *shader = new OpenGLES2Program(kWideVectorCurveGlobeShaderName,vertexGlobeShaderCurveTri,fragmentGlobeShaderCurveTriAlias);
+    if (!shader->isValid())
+    {
+        delete shader;
+        shader = NULL;
+    }
+    
+    // Set some reasonable defaults
+    if (shader)
+    {
+        glUseProgram(shader->getProgram());
+        
+        shader->setUniform("u_length", 10.f/1024);
+        shader->setUniform("u_texScale", 1.f);
+    }
+    
+    return shader;
+}
+
     
 }

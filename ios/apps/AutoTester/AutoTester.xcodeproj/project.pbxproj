@@ -1800,6 +1800,7 @@
 		3651D5D283D23F0C2EFDE845 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				88E4B8EC1B83B9610050D21B /* CoreLocation.framework */,
 				2B82B36A1E82DEC80095FB14 /* libWhirlyGlobeLib.a */,
 				E5D2D66D1DE6C26A00E02305 /* libc++.tbd */,
 				E5D2D66B1DE6C26000E02305 /* libz.tbd */,
@@ -1809,14 +1810,6 @@
 				1F05A4FB888D188E680287F5 /* Pods.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		886FCCBC1BA73B1400494BB0 /* Fameworks */ = {
-			isa = PBXGroup;
-			children = (
-				88E4B8EC1B83B9610050D21B /* CoreLocation.framework */,
-			);
-			name = Fameworks;
 			sourceTree = "<group>";
 		};
 		888943331BD6EE1A00C39A66 /* baselines */ = {
@@ -1965,7 +1958,6 @@
 			isa = PBXGroup;
 			children = (
 				88E4B8C11B83B6AB0050D21B /* AutoTester */,
-				886FCCBC1BA73B1400494BB0 /* Fameworks */,
 				88E4B8C01B83B6AB0050D21B /* Products */,
 				88FF5BDF1BC31D3C002F15CE /* Resources */,
 				3651D5D283D23F0C2EFDE845 /* Frameworks */,

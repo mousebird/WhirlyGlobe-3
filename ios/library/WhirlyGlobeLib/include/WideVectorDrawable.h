@@ -24,15 +24,17 @@ namespace WhirlyKit
 {
     
 // Shader name
-#define kWideVectorShaderName "Wide Vector Shader"
-#define kWideVectorRoundedShaderName "Wide Vector Rounded Shader"
-#define kWideVectorGlobeShaderName "Wide Vector Shader Globe"
-#define kWideVectorRoundedGlobeShaderName "Wide Vector Rounded Shader Globe"
+#define kWideVectorAngleShaderName "Wide Vector Shader"
+#define kWideVectorCurveShaderName "Wide Vector Curve Shader"
+#define kWideVectorAngleGlobeShaderName "Wide Vector Shader Globe"
+#define kWideVectorCurveGlobeShaderName "Wide Vector Curve Shader Globe"
     
 /// Construct and return the wide vector shader program
-OpenGLES2Program *BuildWideVectorPrograms();
+OpenGLES2Program *BuildWideVectorAngleProgram();
+OpenGLES2Program *BuildWideVectorCurveProgram();
 /// This version is for the 3D globe
-OpenGLES2Program *BuildWideVectorGlobeProgram();
+OpenGLES2Program *BuildWideVectorAngleGlobeProgram();
+OpenGLES2Program *BuildWideVectorCurveGlobeProgram();
     
 // Used to debug the wide vectors
 //#define WIDEVECDEBUG 1
