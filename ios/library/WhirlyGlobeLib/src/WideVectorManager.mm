@@ -38,6 +38,7 @@ using namespace Eigen;
 
 - (void)parseDesc:(NSDictionary *)desc
 {
+    _cornerProgramID = [desc intForKey:@"corner shader" default:self.programID];
     _color = [desc objectForKey:@"color" checkType:[UIColor class] default:[UIColor whiteColor]];
     _width = [desc floatForKey:@"width" default:2.0];
     _coordType = (WhirlyKit::WideVectorCoordsType)[desc enumForKey:@"wideveccoordtype" values:@[@"real",@"screen"] default:WideVecCoordScreen];
@@ -490,7 +491,8 @@ class WideVectorDrawableBuilder
 {
 public:
     WideVectorDrawableBuilder(Scene *scene,WhirlyKitWideVectorInfo *vecInfo)
-    : scene(scene), vecInfo(vecInfo), drawable(NULL), centerValid(false), localCenter(0,0,0), dispCenter(0,0,0)
+    : scene(scene), vecInfo(vecInfo), segDrawable(NULL), cornerDrawable(NULL),
+      centerValid(false), localCenter(0,0,0), dispCenter(0,0,0)
     {
         coordAdapter = scene->getCoordAdapter();
         coordSys = coordAdapter->getCoordSystem();
@@ -504,15 +506,103 @@ public:
         dispCenter = newDispCenter;
     }
     
+    // Return a drawable suitable for segments
+    BasicDrawable *getSegmentDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
+    {
+        if (vecInfo.programID == vecInfo.cornerProgramID)
+            return getDrawable(ptCount, triCount, ptCountAllocate, triCountAllocate);
+        
+        int ptGuess = std::min(std::max(ptCount,0),(int)MaxDrawablePoints);
+        int triGuess = std::min(std::max(triCount,0),(int)MaxDrawableTriangles);
+        
+        if (!segDrawable ||
+            (segDrawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
+            (segDrawable->getNumTris()+triGuess > MaxDrawableTriangles))
+        {
+            flush();
+            
+            //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
+            int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
+            int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            segDrawable = wideDrawable;
+            segDrawable->setProgram(vecInfo.programID);
+            wideDrawable->setTexRepeat(vecInfo.repeatSize);
+            wideDrawable->setEdgeSize(vecInfo.edgeSize);
+            wideDrawable->setLineWidth(vecInfo.width);
+            if (vecInfo.coordType == WideVecCoordReal)
+                wideDrawable->setRealWorldWidth(vecInfo.width);
+            
+            //            drawMbr.reset();
+            segDrawable->setType(GL_TRIANGLES);
+            [vecInfo setupBasicDrawable:segDrawable];
+            segDrawable->setColor([vecInfo.color asRGBAColor]);
+            if (vecInfo.texID != EmptyIdentity)
+                segDrawable->setTexId(0, vecInfo.texID);
+            if (centerValid)
+            {
+                Eigen::Affine3d trans(Eigen::Translation3d(dispCenter.x(),dispCenter.y(),dispCenter.z()));
+                Matrix4d transMat = trans.matrix();
+                segDrawable->setMatrix(&transMat);
+            }
+        }
+        
+        return segDrawable;
+    }
+    
+    // Return a drawable suitable for turns
+    BasicDrawable *getCornerDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
+    {
+        if (vecInfo.programID == vecInfo.cornerProgramID)
+            return getDrawable(ptCount, triCount, ptCountAllocate, triCountAllocate);
+        
+        int ptGuess = std::min(std::max(ptCount,0),(int)MaxDrawablePoints);
+        int triGuess = std::min(std::max(triCount,0),(int)MaxDrawableTriangles);
+        
+        if (!cornerDrawable ||
+            (cornerDrawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
+            (cornerDrawable->getNumTris()+triGuess > MaxDrawableTriangles))
+        {
+            flush();
+            
+            //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
+            int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
+            int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            cornerDrawable = wideDrawable;
+            cornerDrawable->setProgram(vecInfo.programID);
+            wideDrawable->setTexRepeat(vecInfo.repeatSize);
+            wideDrawable->setEdgeSize(vecInfo.edgeSize);
+            wideDrawable->setLineWidth(vecInfo.width);
+            if (vecInfo.coordType == WideVecCoordReal)
+                wideDrawable->setRealWorldWidth(vecInfo.width);
+            
+            //            drawMbr.reset();
+            cornerDrawable->setType(GL_TRIANGLES);
+            [vecInfo setupBasicDrawable:cornerDrawable];
+            cornerDrawable->setColor([vecInfo.color asRGBAColor]);
+            if (vecInfo.texID != EmptyIdentity)
+                cornerDrawable->setTexId(0, vecInfo.texID);
+            if (centerValid)
+            {
+                Eigen::Affine3d trans(Eigen::Translation3d(dispCenter.x(),dispCenter.y(),dispCenter.z()));
+                Matrix4d transMat = trans.matrix();
+                cornerDrawable->setMatrix(&transMat);
+            }
+        }
+        
+        return cornerDrawable;
+    }
+    
     // Build or return a suitable drawable (depending on the mode)
     BasicDrawable *getDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
     {
         int ptGuess = std::min(std::max(ptCount,0),(int)MaxDrawablePoints);
         int triGuess = std::min(std::max(triCount,0),(int)MaxDrawableTriangles);
 
-        if (!drawable ||
-            (drawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
-            (drawable->getNumTris()+triGuess > MaxDrawableTriangles))
+        if (!segDrawable ||
+            (segDrawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
+            (segDrawable->getNumTris()+triGuess > MaxDrawableTriangles))
         {
             flush();
             
@@ -520,8 +610,8 @@ public:
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
             int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
             WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
-            drawable = wideDrawable;
-            drawable->setProgram(vecInfo.programID);
+            segDrawable = wideDrawable;
+            segDrawable->setProgram(vecInfo.programID);
             wideDrawable->setTexRepeat(vecInfo.repeatSize);
             wideDrawable->setEdgeSize(vecInfo.edgeSize);
             wideDrawable->setLineWidth(vecInfo.width);
@@ -529,20 +619,20 @@ public:
                 wideDrawable->setRealWorldWidth(vecInfo.width);
             
 //            drawMbr.reset();
-            drawable->setType(GL_TRIANGLES);
-            [vecInfo setupBasicDrawable:drawable];
-            drawable->setColor([vecInfo.color asRGBAColor]);
+            segDrawable->setType(GL_TRIANGLES);
+            [vecInfo setupBasicDrawable:segDrawable];
+            segDrawable->setColor([vecInfo.color asRGBAColor]);
             if (vecInfo.texID != EmptyIdentity)
-                drawable->setTexId(0, vecInfo.texID);
+                segDrawable->setTexId(0, vecInfo.texID);
             if (centerValid)
             {
                 Eigen::Affine3d trans(Eigen::Translation3d(dispCenter.x(),dispCenter.y(),dispCenter.z()));
                 Matrix4d transMat = trans.matrix();
-                drawable->setMatrix(&transMat);
+                segDrawable->setMatrix(&transMat);
             }
         }
         
-        return drawable;
+        return segDrawable;
     }
     
     // Add the points for a linear
@@ -673,12 +763,19 @@ protected:
     // Move an active drawable to the list
     void flush()
     {
-        if (drawable)
+        if (segDrawable)
         {
-            drawable->setLocalMbr(drawMbr);
-            drawables.push_back(drawable);
+            segDrawable->setLocalMbr(drawMbr);
+            drawables.push_back(segDrawable);
         }
-        drawable = NULL;
+        segDrawable = NULL;
+
+        if (cornerDrawable)
+        {
+            cornerDrawable->setLocalMbr(drawMbr);
+            drawables.push_back(cornerDrawable);
+        }
+        cornerDrawable = NULL;
     }
 
     bool centerValid;
@@ -688,7 +785,7 @@ protected:
     CoordSystemDisplayAdapter *coordAdapter;
     CoordSystem *coordSys;
     WhirlyKitWideVectorInfo *vecInfo;
-    BasicDrawable *drawable;
+    BasicDrawable *segDrawable,*cornerDrawable;
     std::vector<BasicDrawable *> drawables;
 };
     

@@ -94,7 +94,8 @@
                                          kMaplyVecCentered: @YES,
 //                                         kMaplyVecTexture: lineTexture,
                                          kMaplyWideVecEdgeFalloff: @(1.0),
-                                         kMaplyWideVecJoinType: kMaplyWideVecMiterJoin,
+//                                         kMaplyWideVecJoinType: kMaplyWideVecMiterJoin,
+                                         kMaplyWideVecJoinType: kMaplyWideVecRoundJoin,
                                          kMaplyWideVecCoordType: kMaplyWideVecCoordTypeScreen,
                                          // More than 10 degrees need a bevel join
                                          kMaplyWideVecMiterLimit: @(10),

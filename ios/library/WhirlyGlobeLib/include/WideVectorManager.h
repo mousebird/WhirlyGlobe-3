@@ -47,6 +47,7 @@ typedef enum {WideVecButtCap,WideVecRoundCap,WideVecSquareCap} WideVectorLineCap
   */
 @interface WhirlyKitWideVectorInfo : WhirlyKitBaseInfo
 
+@property (nonatomic,assign) WhirlyKit::SimpleIdentity cornerProgramID;
 @property (nonatomic) UIColor *color;
 @property (nonatomic,assign) float width;
 @property (nonatomic,assign) float repeatSize;

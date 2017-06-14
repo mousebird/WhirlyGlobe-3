@@ -78,6 +78,8 @@ extern NSString* const kMaplyZBufferWrite;
 
 /// Assign a shader program to a particular feature.  Use the shader program's name
 extern NSString* const kMaplyShader;
+/// Assign a shader program for wide vector corners.
+extern NSString* const kMaplyCornerShader;
 /// An NSDictionary containing uniforms to apply to a shader before drawing
 extern NSString* const kMaplyShaderUniforms;
 

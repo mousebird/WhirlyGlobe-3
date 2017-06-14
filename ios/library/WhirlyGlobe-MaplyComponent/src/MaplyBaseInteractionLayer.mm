@@ -1664,8 +1664,15 @@ public:
     
     // If there's no shader, we'll apply the default one
     CoordSystemDisplayAdapter *coordAdapter = scene->getCoordAdapter();
+    NSNumber *shaderName = @(scene->getProgramIDBySceneName(coordAdapter->isFlat() ? kToolkitDefaultWideVectorProgram : kToolkitDefaultWideVectorGlobeProgram));
+    NSNumber *curveShaderName = @(scene->getProgramIDBySceneName(coordAdapter->isFlat() ? kToolkitDefaultWideVectorCurveProgram : kToolkitDefaultWideVectorCurveGlobeProgram));
     if (!inDesc[kMaplyShader])
-        inDesc[kMaplyShader] = @(scene->getProgramIDBySceneName(coordAdapter->isFlat() ? kToolkitDefaultWideVectorProgram : kToolkitDefaultWideVectorGlobeProgram));
+        inDesc[kMaplyShader] = shaderName;
+    if (!inDesc[kMaplyCornerShader])
+    {
+        NSString *joinType = inDesc[@"wideveclinejointype"];
+        inDesc[kMaplyCornerShader] = [joinType isEqualToString:@"round"] ? curveShaderName : shaderName;
+    }
 
     // Look for a texture and add it
     if (inDesc[kMaplyVecTexture])
