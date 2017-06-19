@@ -64,10 +64,11 @@ GLuint OpenGLMemManager::getBufferID(unsigned int size,GLenum drawType)
     {
         GLuint newAlloc[WhirlyKitOpenGLMemCacheAllocUnit];
         glGenBuffers(WhirlyKitOpenGLMemCacheAllocUnit, newAlloc);
+        CheckGLError("OpenGLMemManager::getBufferID() glBindBuffer");
         for (unsigned int ii=0;ii<WhirlyKitOpenGLMemCacheAllocUnit;ii++)
         {
             buffIDs.insert(newAlloc[ii]);
-    }
+        }
     }
     
     GLuint which = 0;
@@ -82,11 +83,11 @@ GLuint OpenGLMemManager::getBufferID(unsigned int size,GLenum drawType)
     if (size != 0)
     {
         glBindBuffer(GL_ARRAY_BUFFER, which);
-        CheckGLError("BasicDrawable::setupGL() glBindBuffer");
+        CheckGLError("OpenGLMemManager::getBufferID() glBindBuffer");
         glBufferData(GL_ARRAY_BUFFER, size, NULL, drawType);
-        CheckGLError("BasicDrawable::setupGL() glBufferData");
+        CheckGLError("OpenGLMemManager::getBufferID() glBufferData");
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        CheckGLError("BasicDrawable::setupGL() glBindBuffer");
+        CheckGLError("OpenGLMemManager::getBufferID() glBindBuffer");
     }
     
     return which;

@@ -395,7 +395,8 @@ static const char *fragmentShaderCurveTriAlias =
 "    alpha = across/u_edge;\n"
 "  if (across > u_w2-u_edge)\n"
 "    alpha = (u_w2-across)/u_edge;\n"
-"  gl_FragColor = u_color * alpha * patternVal;\n"
+//"  gl_FragColor = u_color * alpha * patternVal;\n"
+"  gl_FragColor = vec4(0.0,1.0,0.0,1.0) * alpha * patternVal;\n"
 "}\n"
 ;
 

@@ -737,7 +737,7 @@ void BasicDrawable::setupGL(WhirlyKitGLSetupInfo *setupInfo,OpenGLMemManager *me
         addPointToBuffer(basePtr,ii,NULL);
     
     // And copy in the element buffer
-    if (tris.size())
+    if (!tris.empty())
     {
         triBuffer = vertexSize*numVerts;
         unsigned char *basePtr = (unsigned char *)glMem + triBuffer + sharedBufferOffset;

@@ -197,9 +197,10 @@ public:
     }
     
     // Build the polygons for a widened line segment
-    void buildPolys(const Point3d *pa,const Point3d *pb,const Point3d *pc,const Point3d &up,BasicDrawable *drawable,bool buildSegment,bool buildJunction)
+    void buildPolys(const Point3d *pa,const Point3d *pb,const Point3d *pc,const Point3d &up,BasicDrawable *segDrawable,BasicDrawable *juncDrawable,bool buildSegment,bool buildJunction)
     {
-        WideVectorDrawable *wideDrawable = dynamic_cast<WideVectorDrawable *>(drawable);
+        WideVectorDrawable *segWideDrawable = dynamic_cast<WideVectorDrawable *>(segDrawable);
+        WideVectorDrawable *juncWideDrawable = dynamic_cast<WideVectorDrawable *>(juncDrawable);
         
         double texLen = (*pb-*pa).norm();
         double texLen2 = 0.0;
@@ -352,7 +353,7 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = -texAdjust;
-                        addWideTri(wideDrawable,triVerts,up);
+                        addWideTri(juncWideDrawable,triVerts,up);
                         
                         if (makeDistinctTurn)
                         {
@@ -360,12 +361,12 @@ public:
                             triVerts[0] = rPt0;
                             triVerts[1] = endPt0.flipped();
                             triVerts[2] = rPt0.flipped();
-                            addWideTri(wideDrawable,triVerts,up);
+                            addWideTri(juncWideDrawable,triVerts,up);
                             
                             triVerts[0] = rPt1;
                             triVerts[1] = rPt1.flipped();
                             triVerts[2] = endPt1.flipped();
-                            addWideTri(wideDrawable,triVerts,up);
+                            addWideTri(juncWideDrawable,triVerts,up);
                         } else {
                             // Extend the segments
                             corners[3] = endPt0.flipped();
@@ -386,7 +387,7 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = texAdjust;
-                        addWideTri(wideDrawable,triVerts,up);
+                        addWideTri(juncWideDrawable,triVerts,up);
                         
                         if (makeDistinctTurn)
                         {
@@ -394,12 +395,12 @@ public:
                             triVerts[0] = lPt0;
                             triVerts[1] = lPt0.flipped();
                             triVerts[2] = endPt0;
-                            addWideTri(wideDrawable,triVerts,up);
+                            addWideTri(juncWideDrawable,triVerts,up);
                             
                             triVerts[0] = lPt1;
                             triVerts[1] = endPt1;
                             triVerts[2] = lPt1.flipped();
-                            addWideTri(wideDrawable,triVerts,up);
+                            addWideTri(juncWideDrawable,triVerts,up);
                         } else {
                             // Extend the segments
                             corners[2] = endPt0;
@@ -418,13 +419,88 @@ public:
                 }
                     break;
                 case WideVecRoundJoin:
+                    // An offset that makes the texture coordinates work
+                    double texAdjust = cos(angleBetween/2.0);
+                    
+                    // Three triangles make up the bend
+                    
+                    // Bending right
+                    if (rPt0.c > 0.0)
+                    {
+                        InterPoint triVerts[3];
+                        
+                        triVerts[0] = texLen > texLen2 ? rPt0 : rPt1;
+                        triVerts[0].texYmin = texNext;
+                        triVerts[0].texYmax = texNext;
+                        triVerts[1] = endPt1.flipped();
+                        triVerts[1].texYmin = texNext;
+                        triVerts[1].texYmax = texNext;
+                        triVerts[1].texOffset = texAdjust;
+                        triVerts[2] = endPt0.flipped();
+                        triVerts[2].texYmin = texNext;
+                        triVerts[2].texYmax = texNext;
+                        triVerts[2].texOffset = -texAdjust;
+                        addWideTri(juncWideDrawable,triVerts,up);
+                        
+                        if (makeDistinctTurn)
+                        {
+                            // Build separate triangles for the turn
+                            triVerts[0] = rPt0;
+                            triVerts[1] = endPt0.flipped();
+                            triVerts[2] = rPt0.flipped();
+                            addWideTri(juncWideDrawable,triVerts,up);
+                            
+                            triVerts[0] = rPt1;
+                            triVerts[1] = rPt1.flipped();
+                            triVerts[2] = endPt1.flipped();
+                            addWideTri(juncWideDrawable,triVerts,up);
+                        } else {
+                            // Extend the segments
+                            corners[3] = endPt0.flipped();
+                            next_e0 = endPt1.flipped();
+                        }
+                    } else {
+                        // Bending left
+                        InterPoint triVerts[3];
+                        
+                        triVerts[0] = texLen > texLen2 ? lPt0 : lPt1;
+                        triVerts[0].texYmin = texNext;
+                        triVerts[0].texYmax = texNext;
+                        triVerts[1] = endPt0;
+                        triVerts[1].texYmin = texNext;
+                        triVerts[1].texYmax = texNext;
+                        triVerts[1].texOffset = -texAdjust;
+                        triVerts[2] = endPt1;
+                        triVerts[2].texYmin = texNext;
+                        triVerts[2].texYmax = texNext;
+                        triVerts[2].texOffset = texAdjust;
+                        addWideTri(juncWideDrawable,triVerts,up);
+                        
+                        if (makeDistinctTurn)
+                        {
+                            // Build separate triangles for the turn
+                            triVerts[0] = lPt0;
+                            triVerts[1] = lPt0.flipped();
+                            triVerts[2] = endPt0;
+                            addWideTri(juncWideDrawable,triVerts,up);
+                            
+                            triVerts[0] = lPt1;
+                            triVerts[1] = endPt1;
+                            triVerts[2] = lPt1.flipped();
+                            addWideTri(juncWideDrawable,triVerts,up);
+                        } else {
+                            // Extend the segments
+                            corners[2] = endPt0;
+                            next_e1 = endPt1;
+                        }
+                    }
                     break;
             }
         }
         
         // Add the rectangles
         if (buildSegment)
-            addWideRect(wideDrawable, corners, up);
+            addWideRect(segWideDrawable, corners, up);
         
         e0 = next_e0;
         e1 = next_e1;
@@ -441,7 +517,7 @@ public:
     
     
     // Add a point to the widened linear we're building
-    void addPoint(const Point3d &inPt,const Point3d &up,BasicDrawable *drawable,bool closed,bool buildSegment,bool buildJunction)
+    void addPoint(const Point3d &inPt,const Point3d &up,BasicDrawable *segDrawable,BasicDrawable *juncDrawable,bool closed,bool buildSegment,bool buildJunction)
     {
         // Compare with the last point, if it's the same, toss it
         if (!pts.empty() && pts.back() == inPt && !closed)
@@ -453,19 +529,19 @@ public:
             const Point3d &pa = pts[pts.size()-3];
             const Point3d &pb = pts[pts.size()-2];
             const Point3d &pc = pts[pts.size()-1];
-            buildPolys(&pa,&pb,&pc,up,drawable,buildSegment,buildJunction);
+            buildPolys(&pa,&pb,&pc,up,segDrawable,juncDrawable,buildSegment,buildJunction);
         }
         lastUp = up;
     }
     
     // Flush out any outstanding points
-    void flush(BasicDrawable *drawable,bool buildLastSegment, bool buildLastJunction)
+    void flush(BasicDrawable *segDrawable,BasicDrawable *juncDrawable,bool buildLastSegment, bool buildLastJunction)
     {
         if (pts.size() >= 2)
         {
             const Point3d &pa = pts[pts.size()-2];
             const Point3d &pb = pts[pts.size()-1];
-            buildPolys(&pa, &pb, NULL, lastUp, drawable, buildLastSegment, buildLastJunction);
+            buildPolys(&pa, &pb, NULL, lastUp, segDrawable, juncDrawable, buildLastSegment, buildLastJunction);
         }
     }
 
@@ -510,7 +586,7 @@ public:
     BasicDrawable *getSegmentDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
     {
         if (vecInfo.programID == vecInfo.cornerProgramID)
-            return getDrawable(ptCount, triCount, ptCountAllocate, triCountAllocate);
+            return getSharedDrawable(ptCount, triCount, ptCountAllocate, triCountAllocate);
         
         int ptGuess = std::min(std::max(ptCount,0),(int)MaxDrawablePoints);
         int triGuess = std::min(std::max(triCount,0),(int)MaxDrawableTriangles);
@@ -519,14 +595,18 @@ public:
             (segDrawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
             (segDrawable->getNumTris()+triGuess > MaxDrawableTriangles))
         {
-            flush();
+            if (segDrawable)
+            {
+                segDrawable->setLocalMbr(drawMbr);
+                drawables.push_back(segDrawable);
+            }
+            segDrawable = NULL;
             
             //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
             int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
-            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector Segments",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
             segDrawable = wideDrawable;
-            segDrawable->setProgram(vecInfo.programID);
             wideDrawable->setTexRepeat(vecInfo.repeatSize);
             wideDrawable->setEdgeSize(vecInfo.edgeSize);
             wideDrawable->setLineWidth(vecInfo.width);
@@ -536,6 +616,7 @@ public:
             //            drawMbr.reset();
             segDrawable->setType(GL_TRIANGLES);
             [vecInfo setupBasicDrawable:segDrawable];
+            segDrawable->setProgram(vecInfo.programID);
             segDrawable->setColor([vecInfo.color asRGBAColor]);
             if (vecInfo.texID != EmptyIdentity)
                 segDrawable->setTexId(0, vecInfo.texID);
@@ -554,7 +635,7 @@ public:
     BasicDrawable *getCornerDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
     {
         if (vecInfo.programID == vecInfo.cornerProgramID)
-            return getDrawable(ptCount, triCount, ptCountAllocate, triCountAllocate);
+            return getSharedDrawable(ptCount, triCount, ptCountAllocate, triCountAllocate);
         
         int ptGuess = std::min(std::max(ptCount,0),(int)MaxDrawablePoints);
         int triGuess = std::min(std::max(triCount,0),(int)MaxDrawableTriangles);
@@ -563,14 +644,18 @@ public:
             (cornerDrawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
             (cornerDrawable->getNumTris()+triGuess > MaxDrawableTriangles))
         {
-            flush();
+            if (cornerDrawable)
+            {
+                cornerDrawable->setLocalMbr(drawMbr);
+                drawables.push_back(cornerDrawable);
+            }
+            cornerDrawable = NULL;
             
             //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
             int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
-            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector Junctions",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
             cornerDrawable = wideDrawable;
-            cornerDrawable->setProgram(vecInfo.programID);
             wideDrawable->setTexRepeat(vecInfo.repeatSize);
             wideDrawable->setEdgeSize(vecInfo.edgeSize);
             wideDrawable->setLineWidth(vecInfo.width);
@@ -580,6 +665,7 @@ public:
             //            drawMbr.reset();
             cornerDrawable->setType(GL_TRIANGLES);
             [vecInfo setupBasicDrawable:cornerDrawable];
+            cornerDrawable->setProgram(vecInfo.cornerProgramID);
             cornerDrawable->setColor([vecInfo.color asRGBAColor]);
             if (vecInfo.texID != EmptyIdentity)
                 cornerDrawable->setTexId(0, vecInfo.texID);
@@ -595,7 +681,7 @@ public:
     }
     
     // Build or return a suitable drawable (depending on the mode)
-    BasicDrawable *getDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
+    BasicDrawable *getSharedDrawable(int ptCount,int triCount,int ptCountAllocate,int triCountAllocate)
     {
         int ptGuess = std::min(std::max(ptCount,0),(int)MaxDrawablePoints);
         int triGuess = std::min(std::max(triCount,0),(int)MaxDrawableTriangles);
@@ -604,7 +690,12 @@ public:
             (segDrawable->getNumPoints()+ptGuess > MaxDrawablePoints) ||
             (segDrawable->getNumTris()+triGuess > MaxDrawableTriangles))
         {
-            flush();
+            if (segDrawable)
+            {
+                segDrawable->setLocalMbr(drawMbr);
+                drawables.push_back(segDrawable);
+            }
+            segDrawable = NULL;
             
 //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
@@ -663,10 +754,16 @@ public:
         WideVectorBuilder vecBuilder(vecInfo,localCenter,dispCenter,color,makeDistinctTurns,coordAdapter);
         
         // Guess at how many points and triangles we'll need
-        int totalTriCount = (int)(5*pts.size());
-        int totalPtCount = totalTriCount * 3;
-        if (totalTriCount < 0)  totalTriCount = 0;
-        if (totalPtCount < 0)  totalPtCount = 0;
+        int segTotalTriCount = (int)(2*pts.size());
+        int segTotalPtCount = segTotalTriCount * 3;
+        int juncTotalTriCount = (int)(3*pts.size());
+        int juncTotalPtCount = 2*juncTotalTriCount;
+        int totalTriCount = 0, totalPtCount = 0;
+        if (vecInfo.programID == vecInfo.cornerProgramID)
+        {
+            totalTriCount = segTotalTriCount + juncTotalTriCount;
+            totalPtCount = segTotalPtCount + juncTotalPtCount;
+        }
         
         // Work through the segments
         Point2f lastPt;
@@ -686,16 +783,35 @@ public:
                 thisUp = coordAdapter->normalForLocal(localPa);
             
             // Get a drawable ready
-            int triCount = 2+3;
-            int ptCount = triCount*3;
-            BasicDrawable *thisDrawable = getDrawable(ptCount,triCount,totalPtCount,totalTriCount);
-            totalTriCount -= triCount;
-            totalPtCount -= ptCount;
+            BasicDrawable *thisSegDrawable=NULL,*thisJuncDrawable=NULL;
+            if (vecInfo.programID == vecInfo.cornerProgramID)
+            {
+                int triCount = 2+3;
+                int ptCount = triCount*3;
+
+                thisSegDrawable = getSharedDrawable(ptCount, triCount, totalPtCount, totalTriCount);
+                thisJuncDrawable = thisSegDrawable;
+                
+                totalTriCount -= triCount;
+                totalPtCount -= ptCount;
+            } else {
+                int segTriCount = 2;
+                int segPtCount = 2*3;
+                thisSegDrawable = getSegmentDrawable(segPtCount,segTriCount,segTotalPtCount,segTotalTriCount);
+                segTotalPtCount -= segPtCount;
+                segTotalTriCount -= segTriCount;
+
+                int juncTriCount = 3;
+                int juncPtCount = 3*3;
+                thisJuncDrawable = getCornerDrawable(juncPtCount,juncTriCount,juncTotalPtCount,juncTotalTriCount);
+                juncTotalPtCount -= juncPtCount;
+                juncTotalTriCount -= juncTriCount;
+            }
             drawMbr.addPoint(geoA);
             
             bool doSegment = !closed || (ii > 0);
             bool doJunction = !closed || (ii >= 0);
-            vecBuilder.addPoint(dispPa,thisUp,thisDrawable,closed,doSegment,doJunction);
+            vecBuilder.addPoint(dispPa,thisUp,thisSegDrawable,thisJuncDrawable,closed,doSegment,doJunction);
             
 //            NSLog(@"Pt = (%f,%f), doSegment = %d, doJunction = %d",geoA.x(),geoA.y(),(int)doSegment,(int)doJunction);
             
@@ -703,39 +819,65 @@ public:
             validLastPt = true;
         }
 
-        vecBuilder.flush(drawable,!closed,true);
+        // Get a drawable ready
+        BasicDrawable *thisSegDrawable=NULL,*thisJuncDrawable=NULL;
+        if (vecInfo.programID == vecInfo.cornerProgramID)
+        {
+            int triCount = 2+3;
+            int ptCount = triCount*3;
+            
+            thisSegDrawable = getSharedDrawable(ptCount, triCount, totalPtCount, totalTriCount);
+            thisJuncDrawable = thisSegDrawable;
+            
+            totalTriCount -= triCount;
+            totalPtCount -= ptCount;
+        } else {
+            int segTriCount = 2;
+            int segPtCount = 2*3;
+            thisSegDrawable = getSegmentDrawable(segPtCount,segTriCount,segTotalPtCount,segTotalTriCount);
+            segTotalPtCount -= segPtCount;
+            segTotalTriCount -= segTriCount;
+            
+            int juncTriCount = 3;
+            int juncPtCount = 3*3;
+            thisJuncDrawable = getCornerDrawable(juncPtCount,juncTriCount,juncTotalPtCount,juncTotalTriCount);
+            juncTotalPtCount -= juncPtCount;
+            juncTotalTriCount -= juncTriCount;
+        }
+
+        vecBuilder.flush(thisSegDrawable,thisJuncDrawable,!closed,true);
     }
     
     // Debug verson of add linear
-    void addLinearDebug()
-    {
-        Point3d up(0,0,1);
-        VectorRing pts;
-        pts.push_back(GeoCoord(0,1));
-        pts.push_back(GeoCoord(0,0));
-        pts.push_back(GeoCoord(1,0));
-        
-        RGBAColor color = [vecInfo.color asRGBAColor];
-        WideVectorBuilder vecBuilder(vecInfo,Point3d(0,0,0),Point3d(0,0,0),color,false,coordAdapter);
-        
-        for (unsigned int ii=0;ii<pts.size();ii++)
-        {
-            // Get the points in display space
-            Point2f geoA = pts[ii];
-            
-            Point3d dispPa(geoA.x(),geoA.y(),0.0);
-
-            // Get a drawable ready
-            int ptCount = 5;
-            int triCount = 4;
-            BasicDrawable *thisDrawable = getDrawable(ptCount,triCount,ptCount,triCount);
-            drawMbr.addPoint(geoA);
-
-            vecBuilder.addPoint(dispPa,up,thisDrawable,false,true,true);
-        }
-        
-        vecBuilder.flush(drawable,true,true);
-    }
+//    void addLinearDebug()
+//    {
+//        Point3d up(0,0,1);
+//        VectorRing pts;
+//        pts.push_back(GeoCoord(0,1));
+//        pts.push_back(GeoCoord(0,0));
+//        pts.push_back(GeoCoord(1,0));
+//        
+//        RGBAColor color = [vecInfo.color asRGBAColor];
+//        WideVectorBuilder vecBuilder(vecInfo,Point3d(0,0,0),Point3d(0,0,0),color,false,coordAdapter);
+//        
+//        for (unsigned int ii=0;ii<pts.size();ii++)
+//        {
+//            // Get the points in display space
+//            Point2f geoA = pts[ii];
+//            
+//            Point3d dispPa(geoA.x(),geoA.y(),0.0);
+//
+//            // Get a drawable ready
+//            int ptCount = 5;
+//            int triCount = 4;
+//            BasicDrawable *thisDrawable = getDrawable(ptCount,triCount,ptCount,triCount);
+//            drawMbr.addPoint(geoA);
+//
+//            vecBuilder.addPoint(dispPa,up,thisDrawable,false,true,true);
+//        }
+//        
+//        vecBuilder.flush(drawable,true,true);
+//    }
 
     // Flush out the drawables
     WideVectorSceneRep *flush(ChangeSet &changes)
@@ -772,8 +914,13 @@ protected:
 
         if (cornerDrawable)
         {
-            cornerDrawable->setLocalMbr(drawMbr);
-            drawables.push_back(cornerDrawable);
+            if (!cornerDrawable->points.empty() && !cornerDrawable->tris.empty())
+            {
+                cornerDrawable->setLocalMbr(drawMbr);
+                drawables.push_back(cornerDrawable);
+            } else {
+                delete cornerDrawable;
+            }
         }
         cornerDrawable = NULL;
     }
