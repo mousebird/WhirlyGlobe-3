@@ -178,7 +178,7 @@ public:
     }
     
     // Add a triangle to the wide drawable
-    void addWideTri(WideVectorDrawable *drawable,InterPoint *verts,const Point3d &up)
+    void addWideTri(WideVectorDrawable *drawable,InterPoint *verts,const Point3d &up,const Point3d *anchor)
     {
         int startPt = drawable->getNumPoints();
 
@@ -191,6 +191,8 @@ public:
             drawable->add_n0(Vector3dToVector3f(vert.n));
             drawable->add_c0(vert.c);
             drawable->add_texInfo(vert.texX,vert.texYmin,vert.texYmax,vert.texOffset);
+            if (anchor)
+                drawable->add_anchor(Vector3dToVector3f(*anchor));
         }
         
         drawable->addTriangle(BasicDrawable::Triangle(startPt+0,startPt+1,startPt+2));
@@ -353,7 +355,7 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = -texAdjust;
-                        addWideTri(juncWideDrawable,triVerts,up);
+                        addWideTri(segWideDrawable,triVerts,up,NULL);
                         
                         if (makeDistinctTurn)
                         {
@@ -361,12 +363,12 @@ public:
                             triVerts[0] = rPt0;
                             triVerts[1] = endPt0.flipped();
                             triVerts[2] = rPt0.flipped();
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                             
                             triVerts[0] = rPt1;
                             triVerts[1] = rPt1.flipped();
                             triVerts[2] = endPt1.flipped();
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                         } else {
                             // Extend the segments
                             corners[3] = endPt0.flipped();
@@ -387,7 +389,7 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = texAdjust;
-                        addWideTri(juncWideDrawable,triVerts,up);
+                        addWideTri(segWideDrawable,triVerts,up,NULL);
                         
                         if (makeDistinctTurn)
                         {
@@ -395,12 +397,12 @@ public:
                             triVerts[0] = lPt0;
                             triVerts[1] = lPt0.flipped();
                             triVerts[2] = endPt0;
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                             
                             triVerts[0] = lPt1;
                             triVerts[1] = endPt1;
                             triVerts[2] = lPt1.flipped();
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                         } else {
                             // Extend the segments
                             corners[2] = endPt0;
@@ -440,20 +442,26 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = -texAdjust;
-                        addWideTri(juncWideDrawable,triVerts,up);
+                        addWideTri(segWideDrawable,triVerts,up,NULL);
                         
+                        // Cap polygon for the curved portion
+                        triVerts[0] = endPt0.flipped();
+                        triVerts[1] = endPt1.flipped();
+                        triVerts[2] = lPt1;
+                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal);
+
                         if (makeDistinctTurn)
                         {
                             // Build separate triangles for the turn
                             triVerts[0] = rPt0;
                             triVerts[1] = endPt0.flipped();
                             triVerts[2] = rPt0.flipped();
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                             
                             triVerts[0] = rPt1;
                             triVerts[1] = rPt1.flipped();
                             triVerts[2] = endPt1.flipped();
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                         } else {
                             // Extend the segments
                             corners[3] = endPt0.flipped();
@@ -474,7 +482,12 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = texAdjust;
-                        addWideTri(juncWideDrawable,triVerts,up);
+                        addWideTri(segWideDrawable,triVerts,up,NULL);
+                        
+                        triVerts[0] = rPt0;
+                        triVerts[1] = endPt1;
+                        triVerts[2] = endPt0;
+                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal);
                         
                         if (makeDistinctTurn)
                         {
@@ -482,12 +495,12 @@ public:
                             triVerts[0] = lPt0;
                             triVerts[1] = lPt0.flipped();
                             triVerts[2] = endPt0;
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                             
                             triVerts[0] = lPt1;
                             triVerts[1] = endPt1;
                             triVerts[2] = lPt1.flipped();
-                            addWideTri(juncWideDrawable,triVerts,up);
+                            addWideTri(segWideDrawable,triVerts,up,NULL);
                         } else {
                             // Extend the segments
                             corners[2] = endPt0;
@@ -605,7 +618,7 @@ public:
             //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
             int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
-            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector Segments",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector Segments",ptAlloc,triAlloc,false,!scene->getCoordAdapter()->isFlat());
             segDrawable = wideDrawable;
             wideDrawable->setTexRepeat(vecInfo.repeatSize);
             wideDrawable->setEdgeSize(vecInfo.edgeSize);
@@ -654,7 +667,7 @@ public:
             //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
             int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
-            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector Junctions",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector Junctions",ptAlloc,triAlloc,true,!scene->getCoordAdapter()->isFlat());
             cornerDrawable = wideDrawable;
             wideDrawable->setTexRepeat(vecInfo.repeatSize);
             wideDrawable->setEdgeSize(vecInfo.edgeSize);
@@ -700,7 +713,7 @@ public:
 //            NSLog(@"Pts = %d, tris = %d",ptGuess,triGuess);
             int ptAlloc = std::min(std::max(ptCountAllocate,0),(int)MaxDrawablePoints);
             int triAlloc = std::min(std::max(triCountAllocate,0),(int)MaxDrawableTriangles);
-            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,!scene->getCoordAdapter()->isFlat());
+            WideVectorDrawable *wideDrawable = new WideVectorDrawable("Widen Vector",ptAlloc,triAlloc,false,!scene->getCoordAdapter()->isFlat());
             segDrawable = wideDrawable;
             segDrawable->setProgram(vecInfo.programID);
             wideDrawable->setTexRepeat(vecInfo.repeatSize);
@@ -733,7 +746,9 @@ public:
         //  if we're doing a closed loop.  This gets us
         //  valid junctions that match up.
         int startPoint = 0;
-        bool makeDistinctTurns = false;
+        // Note: Debugging
+//        bool makeDistinctTurns = false;
+        bool makeDistinctTurns = true;
         if (closed)
         {
             // Note: We need this so we don't lose one turn

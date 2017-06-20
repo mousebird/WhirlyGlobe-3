@@ -44,7 +44,7 @@ OpenGLES2Program *BuildWideVectorCurveGlobeProgram();
 class WideVectorDrawable : public BasicDrawable
 {
 public:
-    WideVectorDrawable(const std::string &name,unsigned int numVert,unsigned int numTri,bool globeMode);
+    WideVectorDrawable(const std::string &name,unsigned int numVert,unsigned int numTri,bool useAnchors,bool globeMode);
     
     virtual unsigned int addPoint(const Point3f &pt);
     // Next point, for calculating p1 - p0
@@ -55,6 +55,8 @@ public:
     void add_n0(const Point3f &vec);
     // Complex constant we multiply by width for t
     void add_c0(float c);
+    // Anchor point for rounded corners
+    void add_anchor(const Point3f &pt);
     // Optional normal
     void addNormal(const Point3f &norm);
     void addNormal(const Point3d &norm);
@@ -85,6 +87,7 @@ protected:
     int n0_index;
     int c0_index;
     int tex_index;
+    int anchor_index;
     
 #ifdef WIDEVECDEBUG
     std::vector<Point3f> locPts;

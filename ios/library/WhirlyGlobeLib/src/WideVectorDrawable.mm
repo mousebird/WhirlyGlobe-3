@@ -28,7 +28,7 @@ using namespace Eigen;
 namespace WhirlyKit
 {
     
-WideVectorDrawable::WideVectorDrawable(const std::string &inName,unsigned int numVert,unsigned int numTri,bool globeMode)
+WideVectorDrawable::WideVectorDrawable(const std::string &inName,unsigned int numVert,unsigned int numTri,bool useAnchors,bool globeMode)
  : BasicDrawable(), texRepeat(1.0), edgeSize(1.0), realWidthSet(false), globeMode(globeMode)
 {
     name = inName;
@@ -43,6 +43,7 @@ WideVectorDrawable::WideVectorDrawable(const std::string &inName,unsigned int nu
     tex_index = addAttribute(BDFloat4Type, "a_texinfo",numVert);
     n0_index = addAttribute(BDFloat3Type, "a_n0",numVert);
     c0_index = addAttribute(BDFloatType, "a_c0",numVert);
+    anchor_index = useAnchors ? addAttribute(BDFloat3Type, "a_anchorPos",numVert) : -1;
 }
  
 // Not.  Do not want standard attributes.
@@ -80,6 +81,12 @@ void WideVectorDrawable::add_p1(const Point3f &pt)
 #ifdef WIDEVECDEBUG
     p1.push_back(pt);
 #endif
+}
+    
+void WideVectorDrawable::add_anchor(const Point3f &pt)
+{
+    if (anchor_index >= 0)
+        addAttributeValue(anchor_index, pt);
 }
 
 void WideVectorDrawable::add_texInfo(float texX,float texYmin,float texYmax,float texOffset)
@@ -299,6 +306,8 @@ static const char *fragmentGlobeShaderTriAlias =
 ;
     
 static const char *vertexShaderCurveTri =
+"precision mediump float;\n"
+"\n"
 "uniform mat4  u_mvpMatrix;\n"
 "uniform mat4  u_mvMatrix;"
 "uniform mat4  u_mvNormalMatrix;"
@@ -309,6 +318,7 @@ static const char *vertexShaderCurveTri =
 "uniform vec4 u_color;\n"
 "\n"
 "attribute vec3 a_position;\n"
+"attribute vec3 a_anchor;\n"
 "attribute vec3 a_normal;\n"
 "attribute vec4 a_texinfo;\n"
 //"attribute vec4 a_color;\n"
@@ -316,6 +326,8 @@ static const char *vertexShaderCurveTri =
 "attribute vec3 a_n0;\n"
 "attribute float a_c0;\n"
 "\n"
+"varying vec2 v_anchorPos;\n"
+"varying vec2 v_vertexPos;\n"
 "varying vec2 v_texCoord;\n"
 //"varying vec4 v_color;\n"
 "\n"
@@ -324,12 +336,16 @@ static const char *vertexShaderCurveTri =
 //"   v_color = a_color;\n"
 //  Position along the line
 "   float t0 = a_c0 * u_real_w2;\n"
-"   t0 = clamp(t0,0.0,1.0);\n"
+//"   t0 = clamp(t0,0.0,1.0);\n"
 "   vec3 realPos = (a_p1 - a_position) * t0 + a_n0 * u_real_w2 + a_position;\n"
 "   float texPos = ((a_texinfo.z - a_texinfo.y) * t0 + a_texinfo.y + a_texinfo.w * u_real_w2) * u_texScale;\n"
 "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
 "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
 "   screenPos /= screenPos.w;\n"
+"   vec4 anchorScreenPos = u_mvpMatrix * vec4(a_anchor,1.0);\n"
+"   anchorScreenPos /= anchorScreenPos.w;\n"
+"   v_anchorPos = a_anchor.xy;\n"
+"   v_vertexPos = realPos.xy;\n"
 "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
 "}\n"
 ;
@@ -380,23 +396,23 @@ static const char *fragmentShaderCurveTriAlias =
 "\n"
 "uniform sampler2D s_baseMap0;\n"
 "uniform bool  u_hasTexture;\n"
-"uniform float u_w2;\n"
+"uniform float u_real_w2;\n"
 "uniform float u_edge;\n"
 "uniform vec4 u_color;\n"
 "\n"
-"varying vec2      v_texCoord;\n"
+"varying vec2 v_anchorPos;\n"
+"varying vec2 v_vertexPos;\n"
+"varying vec2 v_texCoord;\n"
 "\n"
 "void main()\n"
 "{\n"
 "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
 "  float alpha = 1.0;\n"
-"  float across = v_texCoord.x * u_w2;\n"
-"  if (across < u_edge)\n"
-"    alpha = across/u_edge;\n"
-"  if (across > u_w2-u_edge)\n"
-"    alpha = (u_w2-across)/u_edge;\n"
+//"  float dist = distance(v_anchorPos,v_vertexPos);\n"
+//"  if (dist > u_real_w2)\n"
+//"    alpha = 0.0;\n"
 //"  gl_FragColor = u_color * alpha * patternVal;\n"
-"  gl_FragColor = vec4(0.0,1.0,0.0,1.0) * alpha * patternVal;\n"
+"  gl_FragColor = vec4(0.0,1.0,0.0,1.0) * alpha;\n"
 "}\n"
 ;
 
