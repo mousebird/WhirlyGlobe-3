@@ -249,7 +249,7 @@ using namespace Eigen;
     screenSize.x() = tan(_fieldOfView/2.0) * self.heightAboveSurface * 2.0;
     screenSize.y() = screenSize.x() / frameSize.x() * frameSize.y();
 
-    NSLog(@"screenSize = (%f,%f), frameSize = (%f,%f)",screenSize.x(),screenSize.y(),frameSize.x(),frameSize.y());
+//    NSLog(@"screenSize = (%f,%f), frameSize = (%f,%f)",screenSize.x(),screenSize.y(),frameSize.x(),frameSize.y());
 
     return screenSize;
 }
