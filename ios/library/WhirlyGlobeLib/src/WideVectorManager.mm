@@ -240,6 +240,9 @@ public:
     // Build the end cap for a widened line segment
     void buildEndCap(const Point3d *pa,const Point3d *pb,const Point3d &up,BasicDrawable *juncDrawable)
     {
+        // Note: debugging
+        return;
+        
         WideVectorDrawable *juncWideDrawable = dynamic_cast<WideVectorDrawable *>(juncDrawable);
         
         double texBase = texOffset;
@@ -391,42 +394,135 @@ public:
         
         // Do the join polygons if we can
         // Note: Always doing bevel case (sort of)
-        if (iPtsValid && buildJunction)
+        if (buildJunction)
         {
             WideVectorLineJoinType joinType = vecInfo.joinType;
-            // Switch to a miter join if the angle is too great for a bevel
-            if (joinType == WideVecMiterJoin && angleBetween < (M_PI-vecInfo.miterLimit*M_PI/180.0))
-                joinType = WideVecBevelJoin;
-            
-            switch (joinType)
+            if (iPtsValid)
             {
-                case WideVecBevelJoin:
+                // Switch to a miter join if the angle is too great for a bevel
+                if (joinType == WideVecMiterJoin && angleBetween < (M_PI-vecInfo.miterLimit*M_PI/180.0))
+                    joinType = WideVecBevelJoin;
+                
+                switch (joinType)
                 {
-                    // An offset that makes the texture coordinates work
-                    double texAdjust = cos(angleBetween/2.0);
-                    
-                    // Three triangles make up the bend
-                    
-                    // Bending right
-                    if (rPt0.c > 0.0)
+                    case WideVecBevelJoin:
                     {
-                        InterPoint triVerts[3];
+                        // An offset that makes the texture coordinates work
+                        double texAdjust = cos(angleBetween/2.0);
                         
-                        triVerts[0] = texLen > texLen2 ? rPt0 : rPt1;
-                        triVerts[0].texYmin = texNext;
-                        triVerts[0].texYmax = texNext;
-                        triVerts[1] = endPt1.flipped();
-                        triVerts[1].texYmin = texNext;
-                        triVerts[1].texYmax = texNext;
-                        triVerts[1].texOffset = texAdjust;
-                        triVerts[2] = endPt0.flipped();
-                        triVerts[2].texYmin = texNext;
-                        triVerts[2].texYmax = texNext;
-                        triVerts[2].texOffset = -texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                        // Three triangles make up the bend
                         
-                        if (makeDistinctTurn)
+                        // Bending right
+                        if (rPt0.c > 0.0)
                         {
+                            InterPoint triVerts[3];
+                            
+                            triVerts[0] = texLen > texLen2 ? rPt0 : rPt1;
+                            triVerts[0].texYmin = texNext;
+                            triVerts[0].texYmax = texNext;
+                            triVerts[1] = endPt1.flipped();
+                            triVerts[1].texYmin = texNext;
+                            triVerts[1].texYmax = texNext;
+                            triVerts[1].texOffset = texAdjust;
+                            triVerts[2] = endPt0.flipped();
+                            triVerts[2].texYmin = texNext;
+                            triVerts[2].texYmax = texNext;
+                            triVerts[2].texOffset = -texAdjust;
+                            addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                            
+                            if (makeDistinctTurn)
+                            {
+                                // Build separate triangles for the turn
+                                triVerts[0] = rPt0;
+                                triVerts[1] = endPt0.flipped();
+                                triVerts[2] = rPt0.flipped();
+                                addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                                
+                                triVerts[0] = rPt1;
+                                triVerts[1] = rPt1.flipped();
+                                triVerts[2] = endPt1.flipped();
+                                addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                            } else {
+                                // Extend the segments
+                                corners[3] = endPt0.flipped();
+                                next_e0 = endPt1.flipped();
+                            }
+                        } else {
+                            // Bending left
+                            InterPoint triVerts[3];
+                            
+                            triVerts[0] = texLen > texLen2 ? lPt0 : lPt1;
+                            triVerts[0].texYmin = texNext;
+                            triVerts[0].texYmax = texNext;
+                            triVerts[1] = endPt0;
+                            triVerts[1].texYmin = texNext;
+                            triVerts[1].texYmax = texNext;
+                            triVerts[1].texOffset = -texAdjust;
+                            triVerts[2] = endPt1;
+                            triVerts[2].texYmin = texNext;
+                            triVerts[2].texYmax = texNext;
+                            triVerts[2].texOffset = texAdjust;
+                            addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                            
+                            if (makeDistinctTurn)
+                            {
+                                // Build separate triangles for the turn
+                                triVerts[0] = lPt0;
+                                triVerts[1] = lPt0.flipped();
+                                triVerts[2] = endPt0;
+                                addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                                
+                                triVerts[0] = lPt1;
+                                triVerts[1] = endPt1;
+                                triVerts[2] = lPt1.flipped();
+                                addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                            } else {
+                                // Extend the segments
+                                corners[2] = endPt0;
+                                next_e1 = endPt1;
+                            }
+                        }
+                    }
+                        break;
+                    case WideVecMiterJoin:
+                    {
+                        // Don't do anything special for miter joins
+                        corners[2] = rPt0;
+                        corners[3] = lPt0;
+                        next_e0 = lPt0;
+                        next_e1 = rPt0;
+                    }
+                        break;
+                    case WideVecRoundJoin:
+                        // An offset that makes the texture coordinates work
+                        double texAdjust = cos(angleBetween/2.0);
+                        
+                        // Three triangles make up the bend
+                        
+                        // Bending right
+                        if (rPt0.c > 0.0)
+                        {
+                            InterPoint triVerts[3];
+                            
+                            triVerts[0] = texLen > texLen2 ? rPt0 : rPt1;
+                            triVerts[0].texYmin = texNext;
+                            triVerts[0].texYmax = texNext;
+                            triVerts[1] = endPt1.flipped();
+                            triVerts[1].texYmin = texNext;
+                            triVerts[1].texYmax = texNext;
+                            triVerts[1].texOffset = texAdjust;
+                            triVerts[2] = endPt0.flipped();
+                            triVerts[2].texYmin = texNext;
+                            triVerts[2].texYmax = texNext;
+                            triVerts[2].texOffset = -texAdjust;
+                            addWideTri(segWideDrawable,triVerts,up,NULL,false);
+                            
+                            // Cap polygon for the curved portion
+                            triVerts[0] = endPt0.flipped();
+                            triVerts[1] = endPt1.flipped();
+                            triVerts[2] = lPt1;
+                            addWideTri(juncWideDrawable,triVerts,up,&pbLocal,true);
+
                             // Build separate triangles for the turn
                             triVerts[0] = rPt0;
                             triVerts[1] = endPt0.flipped();
@@ -438,29 +534,27 @@ public:
                             triVerts[2] = endPt1.flipped();
                             addWideTri(segWideDrawable,triVerts,up,NULL,true);
                         } else {
-                            // Extend the segments
-                            corners[3] = endPt0.flipped();
-                            next_e0 = endPt1.flipped();
-                        }
-                    } else {
-                        // Bending left
-                        InterPoint triVerts[3];
-                        
-                        triVerts[0] = texLen > texLen2 ? lPt0 : lPt1;
-                        triVerts[0].texYmin = texNext;
-                        triVerts[0].texYmax = texNext;
-                        triVerts[1] = endPt0;
-                        triVerts[1].texYmin = texNext;
-                        triVerts[1].texYmax = texNext;
-                        triVerts[1].texOffset = -texAdjust;
-                        triVerts[2] = endPt1;
-                        triVerts[2].texYmin = texNext;
-                        triVerts[2].texYmax = texNext;
-                        triVerts[2].texOffset = texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
-                        
-                        if (makeDistinctTurn)
-                        {
+                            // Bending left
+                            InterPoint triVerts[3];
+                            
+                            triVerts[0] = texLen > texLen2 ? lPt0 : lPt1;
+                            triVerts[0].texYmin = texNext;
+                            triVerts[0].texYmax = texNext;
+                            triVerts[1] = endPt0;
+                            triVerts[1].texYmin = texNext;
+                            triVerts[1].texYmax = texNext;
+                            triVerts[1].texOffset = -texAdjust;
+                            triVerts[2] = endPt1;
+                            triVerts[2].texYmin = texNext;
+                            triVerts[2].texYmax = texNext;
+                            triVerts[2].texOffset = texAdjust;
+                            addWideTri(segWideDrawable,triVerts,up,NULL,false);
+                            
+                            triVerts[0] = rPt0;
+                            triVerts[1] = endPt1;
+                            triVerts[2] = endPt0;
+                            addWideTri(juncWideDrawable,triVerts,up,&pbLocal,true);
+                            
                             // Build separate triangles for the turn
                             triVerts[0] = lPt0;
                             triVerts[1] = lPt0.flipped();
@@ -471,97 +565,26 @@ public:
                             triVerts[1] = endPt1;
                             triVerts[2] = lPt1.flipped();
                             addWideTri(segWideDrawable,triVerts,up,NULL,true);
-                        } else {
-                            // Extend the segments
-                            corners[2] = endPt0;
-                            next_e1 = endPt1;
                         }
-                    }
+                        break;
                 }
-                    break;
-                case WideVecMiterJoin:
+            } else {
+                // Stick
+                if (joinType == WideVecRoundJoin)
                 {
-                    // Don't do anything special for miter joins
-                    corners[2] = rPt0;
-                    corners[3] = lPt0;
-                    next_e0 = lPt0;
-                    next_e1 = rPt0;
-                }
-                    break;
-                case WideVecRoundJoin:
-                    // An offset that makes the texture coordinates work
-                    double texAdjust = cos(angleBetween/2.0);
-                    
-                    // Three triangles make up the bend
-                    
-                    // Bending right
-                    if (rPt0.c > 0.0)
-                    {
-                        InterPoint triVerts[3];
-                        
-                        triVerts[0] = texLen > texLen2 ? rPt0 : rPt1;
-                        triVerts[0].texYmin = texNext;
-                        triVerts[0].texYmax = texNext;
-                        triVerts[1] = endPt1.flipped();
-                        triVerts[1].texYmin = texNext;
-                        triVerts[1].texYmax = texNext;
-                        triVerts[1].texOffset = texAdjust;
-                        triVerts[2] = endPt0.flipped();
-                        triVerts[2].texYmin = texNext;
-                        triVerts[2].texYmax = texNext;
-                        triVerts[2].texOffset = -texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL,false);
-                        
-                        // Cap polygon for the curved portion
-                        triVerts[0] = endPt0.flipped();
-                        triVerts[1] = endPt1.flipped();
-                        triVerts[2] = lPt1;
-                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal,true);
+                    // Create a rectangle at the beginning for an end cap
+                    Point3d dir = (*pb-*pa).normalized();
+                    // Note: Texture coords are bogus
+                    InterPoint e0 = InterPoint(pbLocal,paLocal,norm0,1.0,texBase,texNext,0.0);
+                    InterPoint e1 = InterPoint(pbLocal,paLocal,revNorm0,0.0,texBase,texNext,0.0);
+                    InterPoint b0 = InterPoint(pbLocal,paLocal,norm0+dir,1.0,texBase,texNext,0.0);
+                    InterPoint b1 = InterPoint(pbLocal,paLocal,revNorm0+dir,0.0,texBase,texNext,0.0);
 
-                        // Build separate triangles for the turn
-                        triVerts[0] = rPt0;
-                        triVerts[1] = endPt0.flipped();
-                        triVerts[2] = rPt0.flipped();
-                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
-                        
-                        triVerts[0] = rPt1;
-                        triVerts[1] = rPt1.flipped();
-                        triVerts[2] = endPt1.flipped();
-                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
-                    } else {
-                        // Bending left
-                        InterPoint triVerts[3];
-                        
-                        triVerts[0] = texLen > texLen2 ? lPt0 : lPt1;
-                        triVerts[0].texYmin = texNext;
-                        triVerts[0].texYmax = texNext;
-                        triVerts[1] = endPt0;
-                        triVerts[1].texYmin = texNext;
-                        triVerts[1].texYmax = texNext;
-                        triVerts[1].texOffset = -texAdjust;
-                        triVerts[2] = endPt1;
-                        triVerts[2].texYmin = texNext;
-                        triVerts[2].texYmax = texNext;
-                        triVerts[2].texOffset = texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL,false);
-                        
-                        triVerts[0] = rPt0;
-                        triVerts[1] = endPt1;
-                        triVerts[2] = endPt0;
-                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal,true);
-                        
-                        // Build separate triangles for the turn
-                        triVerts[0] = lPt0;
-                        triVerts[1] = lPt0.flipped();
-                        triVerts[2] = endPt0;
-                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
-                        
-                        triVerts[0] = lPt1;
-                        triVerts[1] = endPt1;
-                        triVerts[2] = lPt1.flipped();
-                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
-                    }
-                    break;
+                    InterPoint juncCorners[4];
+                    juncCorners[0] = e0;  juncCorners[1] = b0;
+                    juncCorners[2] = b1;  juncCorners[3] = e1;
+                    addWideRect(juncWideDrawable, juncCorners, up, &pbLocal, true);
+                }
             }
         }
         
