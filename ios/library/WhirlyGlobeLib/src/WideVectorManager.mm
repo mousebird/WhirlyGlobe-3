@@ -158,7 +158,7 @@ public:
     }
 
     // Add a rectangle to the wide drawable
-    void addWideRect(WideVectorDrawable *drawable,InterPoint *verts,const Point3d &up)
+    void addWideRect(WideVectorDrawable *drawable,InterPoint *verts,const Point3d &up,const Point3d *anchor,bool useEdgeFalloff)
     {
         int startPt = drawable->getNumPoints();
 
@@ -171,7 +171,12 @@ public:
             drawable->add_n0(Vector3dToVector3f(vert.n));
             drawable->add_c0(vert.c);
             drawable->add_texInfo(vert.texX,vert.texYmin,vert.texYmax,vert.texOffset);
-            drawable->add_edgeFalloff(vecInfo.edgeSize);
+            if (useEdgeFalloff)
+                drawable->add_edgeFalloff(vecInfo.edgeSize);
+            else
+                drawable->add_edgeFalloff(0.0f);
+            if (anchor)
+                drawable->add_anchor(Vector3dToVector3f(*anchor));
         }
 
         drawable->addTriangle(BasicDrawable::Triangle(startPt+0,startPt+1,startPt+3));
@@ -201,6 +206,64 @@ public:
         }
         
         drawable->addTriangle(BasicDrawable::Triangle(startPt+0,startPt+1,startPt+2));
+    }
+
+    // Build the start cap for a widened line segment
+    void buildStartCap(const Point3d *pa,const Point3d *pb,const Point3d &up,BasicDrawable *juncDrawable)
+    {
+        WideVectorDrawable *juncWideDrawable = dynamic_cast<WideVectorDrawable *>(juncDrawable);
+
+        double texBase = 0.0;
+        double texNext = texBase;
+        
+        Point3d paLocal = *pa-dispCenter;
+        Point3d pbLocal = *pb-dispCenter;
+        
+        Point3d norm0 = (*pb-*pa).cross(up);
+        norm0.normalize();
+        Point3d revNorm0 = norm0 * -1.0;
+
+        // Create a rectangle at the beginning for an end cap
+        Point3d dir = -(*pb-*pa).normalized();
+        // Note: Texture coords are bogus
+        InterPoint e0 = InterPoint(paLocal,pbLocal,revNorm0,1.0,texBase,texNext,0.0);
+        InterPoint e1 = InterPoint(paLocal,pbLocal,norm0,0.0,texBase,texNext,0.0);
+        InterPoint b0 = InterPoint(paLocal,pbLocal,revNorm0+dir,1.0,texBase,texBase,0.0);
+        InterPoint b1 = InterPoint(paLocal,pbLocal,norm0+dir,0.0,texBase,texBase,0.0);
+        
+        InterPoint corners[4];
+        corners[0] = e0;  corners[1] = b0;
+        corners[2] = b1;  corners[3] = e1;
+        addWideRect(juncWideDrawable, corners, up, &paLocal, true);
+    }
+    
+    // Build the end cap for a widened line segment
+    void buildEndCap(const Point3d *pa,const Point3d *pb,const Point3d &up,BasicDrawable *juncDrawable)
+    {
+        WideVectorDrawable *juncWideDrawable = dynamic_cast<WideVectorDrawable *>(juncDrawable);
+        
+        double texBase = texOffset;
+        double texNext = texOffset;
+        
+        Point3d paLocal = *pa-dispCenter;
+        Point3d pbLocal = *pb-dispCenter;
+        
+        Point3d norm0 = (*pb-*pa).cross(up);
+        norm0.normalize();
+        Point3d revNorm0 = norm0 * -1.0;
+        
+        // Create a rectangle at the beginning for an end cap
+        Point3d dir = (*pb-*pa).normalized();
+        // Note: Texture coords are bogus
+        InterPoint e0 = InterPoint(pbLocal,paLocal,norm0,1.0,texBase,texNext,0.0);
+        InterPoint e1 = InterPoint(pbLocal,paLocal,revNorm0,0.0,texBase,texNext,0.0);
+        InterPoint b0 = InterPoint(pbLocal,paLocal,norm0+dir,1.0,texBase,texNext,0.0);
+        InterPoint b1 = InterPoint(pbLocal,paLocal,revNorm0+dir,0.0,texBase,texNext,0.0);
+        
+        InterPoint corners[4];
+        corners[0] = e0;  corners[1] = b0;
+        corners[2] = b1;  corners[3] = e1;
+        addWideRect(juncWideDrawable, corners, up, &pbLocal, true);
     }
     
     // Build the polygons for a widened line segment
@@ -257,7 +320,7 @@ public:
             e1 = InterPoint(paLocal,pbLocal,norm0,0.0,texBase,texNext,0.0);
             edgePointsValid = true;
         }
-
+        
         // Calculate points for the expanded linear
         InterPoint corners[4];
         
@@ -504,7 +567,7 @@ public:
         
         // Add the rectangles
         if (buildSegment)
-            addWideRect(segWideDrawable, corners, up);
+            addWideRect(segWideDrawable, corners, up, NULL, true);
         
         e0 = next_e0;
         e1 = next_e1;
@@ -521,13 +584,19 @@ public:
     
     
     // Add a point to the widened linear we're building
-    void addPoint(const Point3d &inPt,const Point3d &up,BasicDrawable *segDrawable,BasicDrawable *juncDrawable,bool closed,bool buildSegment,bool buildJunction)
+    void addPoint(const Point3d &inPt,const Point3d &up,BasicDrawable *segDrawable,BasicDrawable *juncDrawable,BasicDrawable *capDrawable,bool closed,bool buildSegment,bool buildJunction)
     {
         // Compare with the last point, if it's the same, toss it
         if (!pts.empty() && pts.back() == inPt && !closed)
             return;
         
         pts.push_back(inPt);
+        if (pts.size() == 2 && !closed && vecInfo.capType != WideVecButtCap)
+        {
+            const Point3d &pa = pts[0];
+            const Point3d &pb = pts[1];
+            buildStartCap(&pa,&pb,up,capDrawable);
+        }
         if (pts.size() >= 3)
         {
             const Point3d &pa = pts[pts.size()-3];
@@ -539,13 +608,16 @@ public:
     }
     
     // Flush out any outstanding points
-    void flush(BasicDrawable *segDrawable,BasicDrawable *juncDrawable,bool buildLastSegment, bool buildLastJunction)
+    void flush(BasicDrawable *segDrawable,BasicDrawable *juncDrawable,BasicDrawable *capDrawable,bool buildLastSegment, bool buildLastJunction, bool endCap)
     {
         if (pts.size() >= 2)
         {
             const Point3d &pa = pts[pts.size()-2];
             const Point3d &pb = pts[pts.size()-1];
             buildPolys(&pa, &pb, NULL, lastUp, segDrawable, juncDrawable, buildLastSegment, buildLastJunction);
+            
+            if (endCap && vecInfo.capType != WideVecButtCap)
+                buildEndCap(&pa,&pb,lastUp,capDrawable);
         }
     }
 
@@ -813,11 +885,12 @@ public:
                 juncTotalPtCount -= juncPtCount;
                 juncTotalTriCount -= juncTriCount;
             }
+            BasicDrawable *thisCapDrawable = (vecInfo.capType == WideVecRoundCap ? thisJuncDrawable : thisSegDrawable);
             drawMbr.addPoint(geoA);
             
             bool doSegment = !closed || (ii > 0);
             bool doJunction = !closed || (ii >= 0);
-            vecBuilder.addPoint(dispPa,thisUp,thisSegDrawable,thisJuncDrawable,closed,doSegment,doJunction);
+            vecBuilder.addPoint(dispPa,thisUp,thisSegDrawable,thisJuncDrawable,thisCapDrawable,closed,doSegment,doJunction);
             
 //            NSLog(@"Pt = (%f,%f), doSegment = %d, doJunction = %d",geoA.x(),geoA.y(),(int)doSegment,(int)doJunction);
             
@@ -850,8 +923,9 @@ public:
             juncTotalPtCount -= juncPtCount;
             juncTotalTriCount -= juncTriCount;
         }
+        BasicDrawable *thisCapDrawable = (vecInfo.capType == WideVecRoundCap ? thisJuncDrawable : thisSegDrawable);
 
-        vecBuilder.flush(thisSegDrawable,thisJuncDrawable,!closed,true);
+        vecBuilder.flush(thisSegDrawable,thisJuncDrawable,thisCapDrawable,!closed,true,!closed && vecInfo.capType != WideVecButtCap);
     }
     
     // Debug verson of add linear
