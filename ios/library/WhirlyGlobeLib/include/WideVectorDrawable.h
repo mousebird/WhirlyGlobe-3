@@ -57,6 +57,8 @@ public:
     void add_c0(float c);
     // Anchor point for rounded corners
     void add_anchor(const Point3f &pt);
+    // Edge falloff value
+    void add_edgeFalloff(float edge_val);
     // Optional normal
     void addNormal(const Point3f &norm);
     void addNormal(const Point3d &norm);
@@ -88,6 +90,7 @@ protected:
     int c0_index;
     int tex_index;
     int anchor_index;
+    int edge_index;
     
 #ifdef WIDEVECDEBUG
     std::vector<Point3f> locPts;

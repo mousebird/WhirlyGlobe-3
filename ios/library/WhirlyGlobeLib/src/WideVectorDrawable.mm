@@ -43,7 +43,8 @@ WideVectorDrawable::WideVectorDrawable(const std::string &inName,unsigned int nu
     tex_index = addAttribute(BDFloat4Type, "a_texinfo",numVert);
     n0_index = addAttribute(BDFloat3Type, "a_n0",numVert);
     c0_index = addAttribute(BDFloatType, "a_c0",numVert);
-    anchor_index = useAnchors ? addAttribute(BDFloat3Type, "a_anchorPos",numVert) : -1;
+    edge_index = addAttribute(BDFloatType, "a_edge",numVert);
+    anchor_index = useAnchors ? addAttribute(BDFloat3Type, "a_anchor",numVert) : -1;
 }
  
 // Not.  Do not want standard attributes.
@@ -88,6 +89,11 @@ void WideVectorDrawable::add_anchor(const Point3f &pt)
     if (anchor_index >= 0)
         addAttributeValue(anchor_index, pt);
 }
+    
+void WideVectorDrawable::add_edgeFalloff(float edge_val)
+{
+    addAttributeValue(edge_index, edge_val);
+}
 
 void WideVectorDrawable::add_texInfo(float texX,float texYmin,float texYmax,float texOffset)
 {
@@ -123,15 +129,17 @@ void WideVectorDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo, Scene *scen
         {
             frameInfo.program->setUniform("u_w2", (float)(realWidth / pixDispSize));
             frameInfo.program->setUniform("u_real_w2", (float)realWidth);
-            frameInfo.program->setUniform("u_edge", edgeSize);
+//            frameInfo.program->setUniform("u_edge", edgeSize);
         } else {
-            frameInfo.program->setUniform("u_w2", lineWidth);
+            // Note: Why do we need to multiply by 1.5?
+            frameInfo.program->setUniform("u_w2", lineWidth * 1.5f);
             frameInfo.program->setUniform("u_real_w2", pixDispSize * lineWidth);
-            frameInfo.program->setUniform("u_edge", edgeSize);            
+//            frameInfo.program->setUniform("u_edge", edgeSize);
         }
         float texScale = scale/(screenSize*texRepeat);
         frameInfo.program->setUniform("u_texScale", texScale);
         frameInfo.program->setUniform("u_color", Vector4f(color.r/255.0,color.g/255.0,color.b/255.0,color.a/255.0));
+        frameInfo.program->setUniform("u_screenSize", Vector2f(frameInfo.sceneRenderer.framebufferWidth,frameInfo.sceneRenderer.framebufferHeight));
         
         // Note: This calculation is out of date with respect to the shader
         // Redo the calculation for debugging
@@ -195,8 +203,10 @@ static const char *vertexShaderTri =
 "attribute vec3 a_p1;\n"
 "attribute vec3 a_n0;\n"
 "attribute float a_c0;\n"
+"attribute float a_edge;\n"
 "\n"
 "varying vec2 v_texCoord;\n"
+"varying float v_edge;\n"
 //"varying vec4 v_color;\n"
 "\n"
 "void main()\n"
@@ -210,6 +220,7 @@ static const char *vertexShaderTri =
 "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
 "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
 "   screenPos /= screenPos.w;\n"
+"   v_edge = a_edge;\n"
 "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
 "}\n"
 ;
@@ -261,20 +272,20 @@ static const char *fragmentShaderTriAlias =
 "uniform sampler2D s_baseMap0;\n"
 "uniform bool  u_hasTexture;\n"
 "uniform float u_w2;\n"
-"uniform float u_edge;\n"
 "uniform vec4 u_color;\n"
 "\n"
-"varying vec2      v_texCoord;\n"
+"varying float v_edge;\n"
+"varying vec2 v_texCoord;\n"
 "\n"
 "void main()\n"
 "{\n"
 "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
 "  float alpha = 1.0;\n"
 "  float across = v_texCoord.x * u_w2;\n"
-"  if (across < u_edge)\n"
-"    alpha = across/u_edge;\n"
-"  if (across > u_w2-u_edge)\n"
-"    alpha = (u_w2-across)/u_edge;\n"
+"  if (across < v_edge)\n"
+"    alpha = across/v_edge;\n"
+"  if (across > u_w2-v_edge)\n"
+"    alpha = (u_w2-across)/v_edge;\n"
 "  gl_FragColor = u_color * alpha * patternVal;\n"
 "}\n"
 ;
@@ -306,8 +317,6 @@ static const char *fragmentGlobeShaderTriAlias =
 ;
     
 static const char *vertexShaderCurveTri =
-"precision mediump float;\n"
-"\n"
 "uniform mat4  u_mvpMatrix;\n"
 "uniform mat4  u_mvMatrix;"
 "uniform mat4  u_mvNormalMatrix;"
@@ -315,6 +324,7 @@ static const char *vertexShaderCurveTri =
 "uniform float u_w2;\n"
 "uniform float u_real_w2;\n"
 "uniform float u_texScale;\n"
+"uniform vec2 u_screenSize;\n"
 "uniform vec4 u_color;\n"
 "\n"
 "attribute vec3 a_position;\n"
@@ -325,10 +335,12 @@ static const char *vertexShaderCurveTri =
 "attribute vec3 a_p1;\n"
 "attribute vec3 a_n0;\n"
 "attribute float a_c0;\n"
+"attribute float a_edge;\n"
 "\n"
 "varying vec2 v_anchorPos;\n"
 "varying vec2 v_vertexPos;\n"
 "varying vec2 v_texCoord;\n"
+"varying float v_edge;\n"
 //"varying vec4 v_color;\n"
 "\n"
 "void main()\n"
@@ -344,8 +356,9 @@ static const char *vertexShaderCurveTri =
 "   screenPos /= screenPos.w;\n"
 "   vec4 anchorScreenPos = u_mvpMatrix * vec4(a_anchor,1.0);\n"
 "   anchorScreenPos /= anchorScreenPos.w;\n"
-"   v_anchorPos = a_anchor.xy;\n"
-"   v_vertexPos = realPos.xy;\n"
+"   v_anchorPos = anchorScreenPos.xy * u_screenSize;\n"
+"   v_vertexPos = screenPos.xy * u_screenSize;\n"
+"   v_edge = a_edge;\n"
 "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
 "}\n"
 ;
@@ -396,23 +409,24 @@ static const char *fragmentShaderCurveTriAlias =
 "\n"
 "uniform sampler2D s_baseMap0;\n"
 "uniform bool  u_hasTexture;\n"
-"uniform float u_real_w2;\n"
-"uniform float u_edge;\n"
+"uniform float u_w2;\n"
 "uniform vec4 u_color;\n"
 "\n"
 "varying vec2 v_anchorPos;\n"
 "varying vec2 v_vertexPos;\n"
 "varying vec2 v_texCoord;\n"
+"varying float v_edge;\n"
 "\n"
 "void main()\n"
 "{\n"
 "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
 "  float alpha = 1.0;\n"
-//"  float dist = distance(v_anchorPos,v_vertexPos);\n"
-//"  if (dist > u_real_w2)\n"
-//"    alpha = 0.0;\n"
-//"  gl_FragColor = u_color * alpha * patternVal;\n"
-"  gl_FragColor = vec4(0.0,1.0,0.0,1.0) * alpha;\n"
+"  float across = distance(v_anchorPos,v_vertexPos);\n"
+"  if (across > u_w2)\n"
+"    alpha = 0.0;\n"
+"  else if (across > u_w2-v_edge)\n"
+"    alpha = (u_w2-across)/v_edge;\n"
+"  gl_FragColor = u_color * alpha * patternVal;\n"
 "}\n"
 ;
 

@@ -171,6 +171,7 @@ public:
             drawable->add_n0(Vector3dToVector3f(vert.n));
             drawable->add_c0(vert.c);
             drawable->add_texInfo(vert.texX,vert.texYmin,vert.texYmax,vert.texOffset);
+            drawable->add_edgeFalloff(vecInfo.edgeSize);
         }
 
         drawable->addTriangle(BasicDrawable::Triangle(startPt+0,startPt+1,startPt+3));
@@ -178,7 +179,7 @@ public:
     }
     
     // Add a triangle to the wide drawable
-    void addWideTri(WideVectorDrawable *drawable,InterPoint *verts,const Point3d &up,const Point3d *anchor)
+    void addWideTri(WideVectorDrawable *drawable,InterPoint *verts,const Point3d &up,const Point3d *anchor,bool useEdgeFalloff)
     {
         int startPt = drawable->getNumPoints();
 
@@ -191,6 +192,10 @@ public:
             drawable->add_n0(Vector3dToVector3f(vert.n));
             drawable->add_c0(vert.c);
             drawable->add_texInfo(vert.texX,vert.texYmin,vert.texYmax,vert.texOffset);
+            if (useEdgeFalloff)
+                drawable->add_edgeFalloff(vecInfo.edgeSize);
+            else
+                drawable->add_edgeFalloff(0.0f);
             if (anchor)
                 drawable->add_anchor(Vector3dToVector3f(*anchor));
         }
@@ -355,7 +360,7 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = -texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL);
+                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
                         
                         if (makeDistinctTurn)
                         {
@@ -363,12 +368,12 @@ public:
                             triVerts[0] = rPt0;
                             triVerts[1] = endPt0.flipped();
                             triVerts[2] = rPt0.flipped();
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
+                            addWideTri(segWideDrawable,triVerts,up,NULL,true);
                             
                             triVerts[0] = rPt1;
                             triVerts[1] = rPt1.flipped();
                             triVerts[2] = endPt1.flipped();
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
+                            addWideTri(segWideDrawable,triVerts,up,NULL,true);
                         } else {
                             // Extend the segments
                             corners[3] = endPt0.flipped();
@@ -389,7 +394,7 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL);
+                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
                         
                         if (makeDistinctTurn)
                         {
@@ -397,12 +402,12 @@ public:
                             triVerts[0] = lPt0;
                             triVerts[1] = lPt0.flipped();
                             triVerts[2] = endPt0;
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
+                            addWideTri(segWideDrawable,triVerts,up,NULL,true);
                             
                             triVerts[0] = lPt1;
                             triVerts[1] = endPt1;
                             triVerts[2] = lPt1.flipped();
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
+                            addWideTri(segWideDrawable,triVerts,up,NULL,true);
                         } else {
                             // Extend the segments
                             corners[2] = endPt0;
@@ -442,31 +447,24 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = -texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL);
+                        addWideTri(segWideDrawable,triVerts,up,NULL,false);
                         
                         // Cap polygon for the curved portion
                         triVerts[0] = endPt0.flipped();
                         triVerts[1] = endPt1.flipped();
                         triVerts[2] = lPt1;
-                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal);
+                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal,true);
 
-                        if (makeDistinctTurn)
-                        {
-                            // Build separate triangles for the turn
-                            triVerts[0] = rPt0;
-                            triVerts[1] = endPt0.flipped();
-                            triVerts[2] = rPt0.flipped();
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
-                            
-                            triVerts[0] = rPt1;
-                            triVerts[1] = rPt1.flipped();
-                            triVerts[2] = endPt1.flipped();
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
-                        } else {
-                            // Extend the segments
-                            corners[3] = endPt0.flipped();
-                            next_e0 = endPt1.flipped();
-                        }
+                        // Build separate triangles for the turn
+                        triVerts[0] = rPt0;
+                        triVerts[1] = endPt0.flipped();
+                        triVerts[2] = rPt0.flipped();
+                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                        
+                        triVerts[0] = rPt1;
+                        triVerts[1] = rPt1.flipped();
+                        triVerts[2] = endPt1.flipped();
+                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
                     } else {
                         // Bending left
                         InterPoint triVerts[3];
@@ -482,30 +480,23 @@ public:
                         triVerts[2].texYmin = texNext;
                         triVerts[2].texYmax = texNext;
                         triVerts[2].texOffset = texAdjust;
-                        addWideTri(segWideDrawable,triVerts,up,NULL);
+                        addWideTri(segWideDrawable,triVerts,up,NULL,false);
                         
                         triVerts[0] = rPt0;
                         triVerts[1] = endPt1;
                         triVerts[2] = endPt0;
-                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal);
+                        addWideTri(juncWideDrawable,triVerts,up,&pbLocal,true);
                         
-                        if (makeDistinctTurn)
-                        {
-                            // Build separate triangles for the turn
-                            triVerts[0] = lPt0;
-                            triVerts[1] = lPt0.flipped();
-                            triVerts[2] = endPt0;
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
-                            
-                            triVerts[0] = lPt1;
-                            triVerts[1] = endPt1;
-                            triVerts[2] = lPt1.flipped();
-                            addWideTri(segWideDrawable,triVerts,up,NULL);
-                        } else {
-                            // Extend the segments
-                            corners[2] = endPt0;
-                            next_e1 = endPt1;
-                        }
+                        // Build separate triangles for the turn
+                        triVerts[0] = lPt0;
+                        triVerts[1] = lPt0.flipped();
+                        triVerts[2] = endPt0;
+                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
+                        
+                        triVerts[0] = lPt1;
+                        triVerts[1] = endPt1;
+                        triVerts[2] = lPt1.flipped();
+                        addWideTri(segWideDrawable,triVerts,up,NULL,true);
                     }
                     break;
             }
