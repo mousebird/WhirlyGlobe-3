@@ -694,7 +694,7 @@ void SetupDefaultShaders(Scene *scene)
     {
         NSLog(@"SetupDefaultShaders: Wide Vector Curve Globe shader didn't compile.");
     } else {
-        scene->addProgram(kToolkitDefaultWideVectorGlobeProgram, wideVecCurveGlobeShader);
+        scene->addProgram(kToolkitDefaultWideVectorCurveGlobeProgram, wideVecCurveGlobeShader);
     }
 
     // Screen space shader

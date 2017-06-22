@@ -96,6 +96,8 @@
                                          kMaplyWideVecEdgeFalloff: @(1.0),
 //                                         kMaplyWideVecJoinType: kMaplyWideVecMiterJoin,
                                          kMaplyWideVecJoinType: kMaplyWideVecRoundJoin,
+//                                         kMaplyWideVecLineCapType: kMaplyWideVecButtCap,
+//                                         kMaplyWideVecLineCapType: kMaplyWideVecSquareCap,
                                          kMaplyWideVecLineCapType: kMaplyWideVecRoundCap,
                                          kMaplyWideVecCoordType: kMaplyWideVecCoordTypeScreen,
                                          // More than 10 degrees need a bevel join

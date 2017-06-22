@@ -184,6 +184,7 @@ void WideVectorDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo, Scene *scen
 //    }
 }
 
+// Vertex shader for non-round case
 static const char *vertexShaderTri =
 "uniform mat4  u_mvpMatrix;\n"
 "uniform mat4  u_mvMatrix;"
@@ -223,6 +224,7 @@ static const char *vertexShaderTri =
 "}\n"
 ;
 
+// Vertex shader for non-round case that takes globe into account
 static const char *vertexGlobeShaderTri =
 "uniform mat4  u_mvpMatrix;\n"
 "uniform mat4  u_mvMatrix;"
@@ -240,9 +242,10 @@ static const char *vertexGlobeShaderTri =
 "attribute vec3 a_p1;\n"
 "attribute vec3 a_n0;\n"
 "attribute float a_c0;\n"
+"attribute float a_edge;\n"
 "\n"
 "varying vec2 v_texCoord;\n"
-//"varying vec4 v_color;\n"
+"varying float v_edge;\n"
 "varying float      v_dot;\n"
 "\n"
 "void main()\n"
@@ -260,10 +263,12 @@ static const char *vertexGlobeShaderTri =
 "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
 "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
 "   screenPos /= screenPos.w;\n"
+"   v_edge = a_edge;\n"
 "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
 "}\n"
 ;
 
+// Fragment shader for non-round case
 static const char *fragmentShaderTriAlias =
 "precision mediump float;\n"
 "\n"
@@ -288,6 +293,7 @@ static const char *fragmentShaderTriAlias =
 "}\n"
 ;
 
+// Fragment shader for non-round case that takes globe into account
 static const char *fragmentGlobeShaderTriAlias =
 "precision mediump float;\n"
 "\n"
@@ -297,6 +303,7 @@ static const char *fragmentGlobeShaderTriAlias =
 "uniform float u_edge;\n"
 "uniform vec4 u_color;\n"
 "\n"
+"varying float v_edge;\n"
 "varying vec2      v_texCoord;\n"
 "varying float      v_dot;\n"
 //"varying vec4      v_color;\n"
@@ -306,14 +313,15 @@ static const char *fragmentGlobeShaderTriAlias =
 "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
 "  float alpha = 1.0;\n"
 "  float across = v_texCoord.x * u_w2;\n"
-"  if (across < u_edge)\n"
-"    alpha = across/u_edge;\n"
-"  if (across > u_w2-u_edge)\n"
-"    alpha = (u_w2-across)/u_edge;\n"
+"  if (across < v_edge)\n"
+"    alpha = across/v_edge;\n"
+"  if (across > u_w2-v_edge)\n"
+"    alpha = (u_w2-across)/v_edge;\n"
 "  gl_FragColor = (v_dot > 0.0 ? u_color * alpha * patternVal : vec4(0.0,0.0,0.0,0.0));\n"
 "}\n"
 ;
     
+// Vertex shader for round case
 static const char *vertexShaderCurveTri =
 "uniform mat4  u_mvpMatrix;\n"
 "uniform mat4  u_mvMatrix;"
@@ -339,7 +347,6 @@ static const char *vertexShaderCurveTri =
 "varying vec2 v_vertexPos;\n"
 "varying vec2 v_texCoord;\n"
 "varying float v_edge;\n"
-//"varying vec4 v_color;\n"
 "\n"
 "void main()\n"
 "{\n"
@@ -361,6 +368,7 @@ static const char *vertexShaderCurveTri =
 "}\n"
 ;
 
+// Vertex shader for round case that takes globe into account
 static const char *vertexGlobeShaderCurveTri =
 "uniform mat4  u_mvpMatrix;\n"
 "uniform mat4  u_mvMatrix;"
@@ -369,26 +377,31 @@ static const char *vertexGlobeShaderCurveTri =
 "uniform float u_w2;\n"
 "uniform float u_real_w2;\n"
 "uniform float u_texScale;\n"
+"uniform vec2 u_screenSize;\n"
 "uniform vec4 u_color;\n"
 "\n"
 "attribute vec3 a_position;\n"
+"attribute vec3 a_anchor;\n"
 "attribute vec3 a_normal;\n"
 "attribute vec4 a_texinfo;\n"
 //"attribute vec4 a_color;\n"
 "attribute vec3 a_p1;\n"
 "attribute vec3 a_n0;\n"
 "attribute float a_c0;\n"
+"attribute float a_edge;\n"
 "\n"
+"varying vec2 v_anchorPos;\n"
+"varying vec2 v_vertexPos;\n"
 "varying vec2 v_texCoord;\n"
-//"varying vec4 v_color;\n"
-"varying float      v_dot;\n"
+"varying float v_edge;\n"
+"varying float v_dot;\n"
 "\n"
 "void main()\n"
 "{\n"
 //"   v_color = a_color;\n"
 //  Position along the line
 "   float t0 = a_c0 * u_real_w2;\n"
-"   t0 = clamp(t0,0.0,1.0);\n"
+//"   t0 = clamp(t0,0.0,1.0);\n"
 "   vec3 realPos = (a_p1 - a_position) * t0 + a_n0 * u_real_w2 + a_position;\n"
 "   vec4 pt = u_mvMatrix * vec4(a_position,1.0);\n"
 "   pt /= pt.w;\n"
@@ -398,10 +411,16 @@ static const char *vertexGlobeShaderCurveTri =
 "   v_texCoord = vec2(a_texinfo.x, texPos);\n"
 "   vec4 screenPos = u_mvpMatrix * vec4(realPos,1.0);\n"
 "   screenPos /= screenPos.w;\n"
+"   vec4 anchorScreenPos = u_mvpMatrix * vec4(a_anchor,1.0);\n"
+"   anchorScreenPos /= anchorScreenPos.w;\n"
+"   v_anchorPos = anchorScreenPos.xy * u_screenSize;\n"
+"   v_vertexPos = screenPos.xy * u_screenSize;\n"
+"   v_edge = a_edge;\n"
 "   gl_Position = vec4(screenPos.xy,0,1.0);\n"
 "}\n"
 ;
 
+// Fragment shader for round case
 static const char *fragmentShaderCurveTriAlias =
 "precision mediump float;\n"
 "\n"
@@ -428,6 +447,7 @@ static const char *fragmentShaderCurveTriAlias =
 "}\n"
 ;
 
+// Fragment shader for round case that takes globe into account
 static const char *fragmentGlobeShaderCurveTriAlias =
 "precision mediump float;\n"
 "\n"
@@ -437,7 +457,10 @@ static const char *fragmentGlobeShaderCurveTriAlias =
 "uniform float u_edge;\n"
 "uniform vec4 u_color;\n"
 "\n"
-"varying vec2      v_texCoord;\n"
+"varying vec2 v_anchorPos;\n"
+"varying vec2 v_vertexPos;\n"
+"varying vec2 v_texCoord;\n"
+"varying float v_edge;\n"
 "varying float      v_dot;\n"
 //"varying vec4      v_color;\n"
 "\n"
@@ -445,11 +468,11 @@ static const char *fragmentGlobeShaderCurveTriAlias =
 "{\n"
 "  float patternVal = u_hasTexture ? texture2D(s_baseMap0, vec2(0.5,v_texCoord.y)).a : 1.0;\n"
 "  float alpha = 1.0;\n"
-"  float across = v_texCoord.x * u_w2;\n"
-"  if (across < u_edge)\n"
-"    alpha = across/u_edge;\n"
-"  if (across > u_w2-u_edge)\n"
-"    alpha = (u_w2-across)/u_edge;\n"
+"  float across = distance(v_anchorPos,v_vertexPos);\n"
+"  if (across > u_w2)\n"
+"    alpha = 0.0;\n"
+"  else if (across > u_w2-v_edge)\n"
+"    alpha = (u_w2-across)/v_edge;\n"
 "  gl_FragColor = (v_dot > 0.0 ? u_color * alpha * patternVal : vec4(0.0,0.0,0.0,0.0));\n"
 "}\n"
 ;
