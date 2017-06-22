@@ -240,9 +240,6 @@ public:
     // Build the end cap for a widened line segment
     void buildEndCap(const Point3d *pa,const Point3d *pb,const Point3d &up,BasicDrawable *juncDrawable)
     {
-        // Note: debugging
-        return;
-        
         WideVectorDrawable *juncWideDrawable = dynamic_cast<WideVectorDrawable *>(juncDrawable);
         
         double texBase = texOffset;
@@ -393,7 +390,6 @@ public:
         }
         
         // Do the join polygons if we can
-        // Note: Always doing bevel case (sort of)
         if (buildJunction)
         {
             WideVectorLineJoinType joinType = vecInfo.joinType;
@@ -832,9 +828,7 @@ public:
         //  if we're doing a closed loop.  This gets us
         //  valid junctions that match up.
         int startPoint = 0;
-        // Note: Debugging
-//        bool makeDistinctTurns = false;
-        bool makeDistinctTurns = true;
+        bool makeDistinctTurns = false;
         if (closed)
         {
             // Note: We need this so we don't lose one turn
