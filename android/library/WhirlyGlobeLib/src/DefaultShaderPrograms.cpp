@@ -666,7 +666,7 @@ void SetupDefaultShaders(Scene *scene)
 #endif
     
     // Widened vector shader
-    OpenGLES2Program *wideVecShader = BuildWideVectorProgram();
+    OpenGLES2Program *wideVecShader = BuildWideVectorAngleProgram();
     if (!wideVecShader)
     {
         fprintf(stderr,"SetupDefaultShaders: Wide Vector shader didn't compile.");
@@ -675,13 +675,32 @@ void SetupDefaultShaders(Scene *scene)
     }
     
     // Widened vector shader (globe version)
-    OpenGLES2Program *wideVecGlobeShader = BuildWideVectorGlobeProgram();
+    OpenGLES2Program *wideVecGlobeShader = BuildWideVectorAngleGlobeProgram();
     if (!wideVecGlobeShader)
     {
         fprintf(stderr,"SetupDefaultShaders: Wide Vector Globe shader didn't compile.");
     } else {
         scene->addProgram(kToolkitDefaultWideVectorGlobeProgram, wideVecGlobeShader);
-    }    
+    }
+    
+    // Widened vector shader, rounded corners
+    OpenGLES2Program *wideVecCurveShader = BuildWideVectorCurveProgram();
+    if (!wideVecCurveShader)
+    {
+        fprintf(stderr,"SetupDefaultShaders: Wide Vector Curve shader didn't compile.");
+    } else {
+        scene->addProgram(kToolkitDefaultWideVectorCurveProgram, wideVecCurveShader);
+    }
+    
+    // Widened vector shader, rounded corners (globe version)
+    OpenGLES2Program *wideVecCurveGlobeShader = BuildWideVectorCurveGlobeProgram();
+    if (!wideVecCurveGlobeShader)
+    {
+        fprintf(stderr,"SetupDefaultShaders: Wide Vector Curve Globe shader didn't compile.");
+    } else {
+        scene->addProgram(kToolkitDefaultWideVectorCurveGlobeProgram, wideVecCurveGlobeShader);
+    }
+
     
     if (dynamic_cast<WhirlyGlobe::GlobeScene *>(scene))
     {

@@ -57,6 +57,7 @@ public class LocalVectorTileTestCase extends MaplyTestCase {
         MBTiles mbTileSource = new MBTiles(mbTiles);
         VectorStyleSimpleGenerator simpleStyles = new VectorStyleSimpleGenerator(baseController);
         MapboxVectorTileSource tileSource = new MapboxVectorTileSource(mbTileSource,simpleStyles);
+        tileSource.disposeAfterRemoval = true;
 
         QuadPagingLayer layer = new QuadPagingLayer(baseController,tileSource.coordSys,tileSource);
         layer.setSimultaneousFetches(4);

@@ -17,6 +17,14 @@ JNIEXPORT void JNICALL Java_com_mousebird_maply_WideVectorInfo_setJoinTypeNative
 
 /*
  * Class:     com_mousebird_maply_WideVectorInfo
+ * Method:    setCapTypeNative
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_com_mousebird_maply_WideVectorInfo_setCapTypeNative
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     com_mousebird_maply_WideVectorInfo
  * Method:    setMitreLimit
  * Signature: (D)V
  */

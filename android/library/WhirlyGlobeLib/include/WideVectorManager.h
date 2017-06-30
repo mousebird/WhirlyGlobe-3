@@ -50,6 +50,7 @@ public:
     WideVectorInfo();
     WideVectorInfo(const Dictionary &dict);
 
+    SimpleIdentity cornerProgramID;
     RGBAColor color;
     float width;
     float repeatSize;

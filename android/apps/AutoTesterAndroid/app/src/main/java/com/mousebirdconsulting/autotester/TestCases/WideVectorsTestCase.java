@@ -44,9 +44,11 @@ public class WideVectorsTestCase extends MaplyTestCase {
 
         WideVectorInfo wideVecInfo = new WideVectorInfo();
         wideVecInfo.setColor(Color.BLUE);
-        wideVecInfo.setLineWidth(40.0f);
+        wideVecInfo.setLineWidth(10.0f);
         wideVecInfo.setTexture(tex);
         wideVecInfo.setTextureRepeatLength(8.0);
+        wideVecInfo.setJoinType(WideVectorInfo.JoinType.RoundJoin);
+        wideVecInfo.setCapType(WideVectorInfo.CapType.RoundCap);
 
         VectorInfo vecInfo = new VectorInfo();
         vecInfo.setLineWidth(10.0f);

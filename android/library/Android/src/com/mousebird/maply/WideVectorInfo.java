@@ -23,6 +23,7 @@ public class WideVectorInfo extends BaseInfo
         setColor(Color.WHITE);
         setLineWidth(2.0f);
         setJoinType(JoinType.MiterJoin);
+        setCapType(CapType.ButtCap);
         setMitreLimit(2.0f);
         setTexId(0);
         setEdgeFalloff(1.0f);
@@ -34,11 +35,13 @@ public class WideVectorInfo extends BaseInfo
         dispose();
     }
 
-    enum JoinType {MiterJoin,BevelJoin};
+    public enum JoinType {MiterJoin,RoundJoin,BevelJoin};
+    public enum CapType {ButtCap,RoundCap,SquareCap};
 
     /**
      * When lines meet in a join there are several options for representing them.
      * These include MiterJoin, which is a simple miter join and BevelJoin which is a more complicated bevel.
+     *
      * See http://www.w3.org/TR/SVG/painting.html#StrokeLinejoinProperty for how these look.
      */
     public void setJoinType(JoinType joinType)
@@ -47,6 +50,15 @@ public class WideVectorInfo extends BaseInfo
     }
 
     native void setJoinTypeNative(int joinType);
+
+    /**
+     * At the end of line segments we can add a cap or leave none.
+     *
+     * See http://www.w3.org/TR/SVG/painting.html#StrokeLinejoinProperty for how these look.
+     */
+    public void setCapType(CapType capType) { setCapTypeNative(capType.ordinal()); }
+
+    native void setCapTypeNative(int capType);
 
     /**
      * When using miter joins you can trigger them at a certain threshold.
