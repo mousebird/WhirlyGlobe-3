@@ -13,7 +13,6 @@
 
 #import "MaplyTestCase.h"
 #import "GeographyClassTestCase.h"
-#import "CesiumElevationTestCase.h"
 #import "VectorsTestCase.h"
 #import "TextureVectorTestCase.h"
 #import "ShapefileTestCase.h"
@@ -24,10 +23,7 @@
 #import "ShapesTestCase.h"
 #import "LoftedPolysTestCase.h"
 #import "CartoDBTestCase.h"
-//#import "ElevationLocalDatabase.h"
 #import "RunwayBuilderTestCase.h"
-//#import "ParticleTest.h"
-//#import "AnimatedColorRampTestCase.h"
 #import "ExtrudedModelTestCase.h"
 #import "GreatCircleTestCase.h"
 #import "LabelAnimationTestCase.h"
@@ -39,6 +35,6 @@
 #import "VectorStyleTestCase.h"
 #import "ActiveObjectTestCase.h"
 #import "GeoJSONSource.h"
-//#import "LIDARTestCase.h"
+#import "GlyphProblemTestCase.h"
 
 #endif

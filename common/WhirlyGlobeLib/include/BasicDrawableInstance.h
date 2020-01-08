@@ -38,8 +38,6 @@ class BasicDrawableInstance : virtual public Drawable
 friend class BasicDrawableInstanceBuilder;
     
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-
     /// Either the old style where we reuse drawables or the new style, largely for models
     typedef enum {ReuseStyle,LocalStyle} Style;
     
@@ -86,9 +84,6 @@ public:
     /// If present, we'll do a pre-render calculation pass with this program set
     virtual SimpleIdentity getCalculationProgram() const;
     
-    /// Some drawables have a pre-render phase that uses the GPU for calculation
-    virtual void calculate(RendererFrameInfo *frameInfo,Scene *scene);
-
     /// Set the enable on/off
     void setEnable(bool newEnable);
     

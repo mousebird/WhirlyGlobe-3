@@ -134,6 +134,13 @@ void RenderTargetMTL::setTargetTexture(TextureBaseMTL *inTex)
     tex = theTex->getMTLID();
     pixelFormat = inTex->getMTLID().pixelFormat;
 }
+
+void RenderTargetMTL::setTargetDepthTexture(TextureBaseMTL *inDepthTex)
+{
+    depthTex = inDepthTex->getMTLID();
+    depthPixelFormat = inDepthTex->getMTLID().pixelFormat;
+}
+
     
 MTLRenderPassDescriptor *RenderTargetMTL::makeRenderPassDesc()
 {
@@ -159,6 +166,9 @@ MTLRenderPassDescriptor *RenderTargetMTL::makeRenderPassDesc()
             NSLog(@"RenderTargetMTL: Unknown Pixel Format.  Not clearing.");
             break;
     }
+    if (depthTex) {
+        renderPassDesc.depthAttachment.texture = depthTex;
+    }
     renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
     
     clearOnce = false;
@@ -173,6 +183,8 @@ MTLPixelFormat RenderTargetMTL::getPixelFormat()
     
 MTLRenderPassDescriptor *RenderTargetMTL::getRenderPassDesc()
 {
+    if (!renderPassDesc)
+        makeRenderPassDesc();
     return renderPassDesc;
 }
     

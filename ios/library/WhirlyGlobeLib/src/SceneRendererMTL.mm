@@ -48,6 +48,7 @@ RendererFrameInfoMTL::RendererFrameInfoMTL(const RendererFrameInfoMTL &that)
 
 SceneRendererMTL::SceneRendererMTL(id<MTLDevice> mtlDevice, float inScale)
 {
+    offscreenBlendEnable = false;
     init();
     scale = inScale;
     setupInfo.mtlDevice = mtlDevice;
@@ -95,12 +96,20 @@ bool SceneRendererMTL::setup(int sizeX,int sizeY,bool offscreen)
         fbTexMTL->setIsEmptyTexture(true);
         fbTexMTL->setFormat(TexTypeUnsignedByte);
         fbTexMTL->createInRenderer(&setupInfo);
-        
         framebufferTex = fbTexMTL;
         
+        // And one for depth
+        TextureMTLRef depthTexMTL = TextureMTLRef(new TextureMTL("Framebuffer Depth Texture"));
+        depthTexMTL->setWidth(sizeX);
+        depthTexMTL->setHeight(sizeY);
+        depthTexMTL->setIsEmptyTexture(true);
+        depthTexMTL->setFormat(TexTypeDepthFloat32);
+        depthTexMTL->createInRenderer(&setupInfo);
+
         // Note: Should make this optional
-        defaultTarget->blendEnable = false;
+        defaultTarget->blendEnable = offscreenBlendEnable;
         defaultTarget->setTargetTexture(fbTexMTL.get());
+        defaultTarget->setTargetDepthTexture(depthTexMTL.get());
     } else {
         if (sizeX > 0 && sizeY > 0)
             defaultTarget->init(this,NULL,EmptyIdentity);
@@ -349,7 +358,7 @@ void SceneRendererMTL::render(TimeInterval duration,
         return;
     }
     
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = scene->getCurrentTime();
     lastDraw = now;
     
     if (perfInterval > 0)
@@ -414,7 +423,7 @@ void SceneRendererMTL::render(TimeInterval duration,
         baseFrameInfo.modelTrans4d = modelTrans4d;
         baseFrameInfo.scene = scene;
         baseFrameInfo.frameLen = duration;
-        baseFrameInfo.currentTime = TimeGetCurrent();
+        baseFrameInfo.currentTime = scene->getCurrentTime();
         baseFrameInfo.projMat = projMat;
         baseFrameInfo.projMat4d = projMat4d;
         baseFrameInfo.mvpMat = mvpMat;
@@ -553,7 +562,7 @@ void SceneRendererMTL::render(TimeInterval duration,
         // Run any calculation shaders
         // These should be independent of screen space, so we only run them once and ignore offsets.
         // Note: Can't run calculation shaders without a normal screen
-        if (!calcPassDone && renderPassDesc) {
+        if (!calcPassDone) {
             // Need some sort of render target even if we're not really rendering
             RenderTargetMTLRef renderTarget = std::dynamic_pointer_cast<RenderTargetMTL>(renderTargets.back());
             baseFrameInfo.renderTarget = renderTarget.get();
@@ -568,7 +577,9 @@ void SceneRendererMTL::render(TimeInterval duration,
             
             if (haveCalcShader) {
                 // Have to set an active framebuffer for our empty fragment shaders to write to
-                RenderTargetMTLRef renderTarget = std::dynamic_pointer_cast<RenderTargetMTL>(renderTargets[0]);
+                RenderTargetMTLRef renderTarget = std::dynamic_pointer_cast<RenderTargetMTL>(renderTargets[renderTargets.size()-1]);
+                if (!renderPassDesc)
+                    renderPassDesc = renderTarget->getRenderPassDesc();
 
                 // Each render target needs its own buffer and command queue
                 id<MTLCommandBuffer> cmdBuff = [cmdQueue commandBuffer];
@@ -591,7 +602,7 @@ void SceneRendererMTL::render(TimeInterval duration,
                         continue;
                     }
                     baseFrameInfo.program = calcProgram;
-
+                    
 //                    id<MTLRenderCommandEncoder> cmdEncode = [masterEncode renderCommandEncoder];
                     id<MTLRenderCommandEncoder> cmdEncode = masterEncode;
 
@@ -601,7 +612,10 @@ void SceneRendererMTL::render(TimeInterval duration,
                     // Regular uniforms
                     // TODO: Can we do this just once?
                     setupUniformBuffer(&baseFrameInfo,cmdEncode,scene->getCoordAdapter());
-                    
+
+                    // Per program uniforms need to be set up
+                    BasicDrawableMTL::encodeUniBlocks(&baseFrameInfo, calcProgram->uniBlocks, cmdEncode);
+
                     // Run the calculation phase
                     drawContain.drawable->calculate(&baseFrameInfo,cmdEncode,scene);
                     
@@ -637,7 +651,7 @@ void SceneRendererMTL::render(TimeInterval duration,
             if (renderTarget->getTex() == nil) {
                 // This happens if the dev wants an instantaneous render
                 if (!renderPassDesc)
-                    continue;
+                    renderPassDesc = renderTarget->getRenderPassDesc();
                 
 //                masterEncode = [cmdBuff parallelRenderCommandEncoderWithDescriptor:renderPassDesc];
                 masterEncode = [cmdBuff renderCommandEncoderWithDescriptor:renderPassDesc];
@@ -730,7 +744,7 @@ void SceneRendererMTL::render(TimeInterval duration,
                 ProgramMTL *program = (ProgramMTL *)scene->getProgram(drawProgramId);
                 if (!program) {
                     wkLogLevel(Error, "SceneRendererMTL: Drawable without Program");
-                    [cmdEncode endEncoding];
+//                    [cmdEncode endEncoding];
                     continue;
                 }
                 

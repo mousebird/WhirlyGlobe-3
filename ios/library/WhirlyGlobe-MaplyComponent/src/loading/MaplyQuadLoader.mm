@@ -99,7 +99,7 @@ using namespace WhirlyKit;
 
 @implementation MaplyQuadLoaderBase
 
-- (instancetype)initWithViewC:(MaplyBaseViewController *)inViewC
+- (instancetype)initWithViewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     self = [super init];
     _flipY = true;
@@ -111,6 +111,15 @@ using namespace WhirlyKit;
 - (bool)delayedInit
 {
     return true;
+}
+
+- (bool)isLoading
+{
+    // Maybe we're still setting up
+    if (!loader)
+        return true;
+    
+    return loader->getLoadingStatus();
 }
 
 - (MaplyBoundingBox)geoBoundsForTile:(MaplyTileID)tileID
@@ -291,7 +300,19 @@ using namespace WhirlyKit;
         return;
     // Note: Need to do something more here for single frame cases
     
-    NSLog(@"MaplyQuadImageLoader: Failed to fetch tile %d: (%d,%d) frame %d because:\n%@",tileID.level,tileID.x,tileID.y,frame,[error localizedDescription]);
+    NSLog(@"MaplyQuadLoader: Failed to fetch tile %d: (%d,%d) frame %d because:\n%@",tileID.level,tileID.x,tileID.y,frame,[error localizedDescription]);
+}
+
+- (void)tileUnloaded:(MaplyTileID)tileID {
+    if (!loader || !valid)
+        return;
+
+    dispatch_queue_t theQueue = _queue;
+    if (!theQueue)
+        theQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+    dispatch_async(theQueue, ^{
+        [self->loadInterp tileUnloaded:tileID];
+    });
 }
 
 // Called on the SamplingLayer.LayerThread
@@ -327,7 +348,10 @@ using namespace WhirlyKit;
         }
         
         // Do the parsing on another thread since it can be slow
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        dispatch_queue_t theQueue = _queue;
+        if (!theQueue)
+            theQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+        dispatch_async(theQueue, ^{
             // No load interpreter means the fetcher created the objects.  Hopefully.
             if (self->loadInterp)
                 [self->loadInterp dataForTile:loadReturn loader:self];
@@ -366,7 +390,7 @@ using namespace WhirlyKit;
     if (self->samplingLayer && self->samplingLayer.layerThread)
         [self performSelector:@selector(cleanup) onThread:self->samplingLayer.layerThread withObject:nil waitUntilDone:NO];
     
-    [self.viewC releaseSamplingLayer:samplingLayer forUser:loader];
+    [[self.viewC getRenderControl] releaseSamplingLayer:samplingLayer forUser:loader];
 }
 
 @end
