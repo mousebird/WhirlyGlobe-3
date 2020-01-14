@@ -21,6 +21,10 @@
 	return self;
 }
 
+- (void)setLoader:(MaplyQuadLoaderBase * _Nonnull)loader {
+    _loader = (MaplyQuadPagingLoader *)loader;
+}
+
 // Generate a URL for a given tile
 - (MaplyRemoteTileFetchInfo *)fetchInfoForTile:(MaplyTileID)tileID flipY:(bool)flipY
 {
@@ -54,21 +58,26 @@
         // display it on the map
         MaplyComponentObject *filledObj =
         [_loader.viewC addVectors:@[vecObj]
-                           desc:@{kMaplyColor: [UIColor colorWithRed:0.25 green:0.0 blue:0.0 alpha:0.25],
-                                  kMaplyFilled: @(YES),
-                                  kMaplyEnable: @(NO)
-                                  }
-                           mode:MaplyThreadCurrent];
+                             desc:@{kMaplyColor: [UIColor colorWithRed:0.25 green:0.0 blue:0.0 alpha:0.25],
+                                    kMaplyFilled: @(YES),
+                                    kMaplyEnable: @(NO)
+                             }
+                             mode:MaplyThreadCurrent];
         MaplyComponentObject *outlineObj =
         [_loader.viewC addVectors:@[vecObj]
-                           desc:@{kMaplyColor: [UIColor redColor],
-                                  kMaplyFilled: @(NO),
-                                  kMaplyEnable: @(NO)
-                                  }
-                           mode:MaplyThreadCurrent];
+                             desc:@{kMaplyColor: [UIColor redColor],
+                                    kMaplyFilled: @(NO),
+                                    kMaplyEnable: @(NO)
+                             }
+                             mode:MaplyThreadCurrent];
         
-        [loadReturn addCompObjs:@[filledObj,outlineObj]];
+        [loadReturn addCompObj:filledObj];
+        [loadReturn addCompObj:outlineObj];
     }
 }
+
+- (void)tileUnloaded:(MaplyTileID)tileID { 
+}
+
 
 @end

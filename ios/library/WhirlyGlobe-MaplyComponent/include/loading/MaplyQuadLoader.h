@@ -18,7 +18,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "control/MaplyViewControllerLayer.h"
+#import "control/MaplyControllerLayer.h"
 #import "math/MaplyCoordinateSystem.h"
 #import "loading/MaplyTileSourceNew.h"
 #import "control/MaplyRenderController.h"
@@ -82,6 +82,11 @@
  */
 - (void)dataForTile:(MaplyLoaderReturn * __nonnull)loadReturn loader:(MaplyQuadLoaderBase * __nonnull)loader;
 
+/**
+  Notification that the tile was unloaded by the system.  If you're tracking your own resources, you may need this.
+ */
+- (void)tileUnloaded:(MaplyTileID)tileID;
+
 @end
 
 /** Base class for the quad loaders.
@@ -106,7 +111,13 @@
 
 /// View controller this is attached to.
 /// Useful for delegate calls that might not be tracking that.
-@property (nonatomic,readonly,weak,nullable) MaplyBaseViewController *viewC;
+@property (nonatomic,readonly,weak,nullable) NSObject<MaplyRenderControllerProtocol> *viewC;
+
+/// If set, we'll call the interpreter on this queue
+@property (nonatomic,nullable,strong) dispatch_queue_t queue;
+
+// True if the loader is not currently loading anything
+- (bool)isLoading;
 
 /**
  Calculate the bounding box for a single tile in geographic.
@@ -176,6 +187,14 @@
  visuals will change as everything comes in.
  */
 - (void)changeInterpreter:(NSObject<MaplyLoaderInterpreter> *__nonnull)interp;
+
+/**
+  Force a reload of the data.
+  <br>
+  All the current loads will be cancelled, any in flight will be ignored
+  and the loader will ask for a whole new set of data.
+  */
+- (void)reload;
 
 /** Turn off the loader and shut things down.
  This unregisters us with the sampling layer and shuts down the various objects we created.

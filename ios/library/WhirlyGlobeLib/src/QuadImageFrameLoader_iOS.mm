@@ -141,19 +141,25 @@ void QIFTileAsset_ios::startFetching(QuadImageFrameLoader *inLoader,int frameToL
             // If we're not loading all frames, then just load the one we need
             if (frameToLoad == -1 || frameToLoad == frame) {
                 QIFFrameAsset_ios *frameAsset = (QIFFrameAsset_ios *)frames[frame].get();
-                id fetchInfo = [frameInfo fetchInfoForTile:tileID flipY:loader->getFlipY()];
+                id fetchInfo = nil;
+                if (frameInfo.minZoom <= tileID.level && tileID.level <= frameInfo.maxZoom)
+                    fetchInfo = [frameInfo fetchInfoForTile:tileID flipY:loader->getFlipY()];
                 if (fetchInfo) {
                     MaplyTileFetchRequest *request = frameAsset->setupFetch(loader,fetchInfo,frameInfo,loader->calcLoadPriority(ident,frame),ident.importance);
-                    
                     NSObject<QuadImageFrameLoaderLayer> * __weak layer = loader->layer;
-                    
-                    request.success = ^(MaplyTileFetchRequest *request, id data) {
-                        [layer fetchRequestSuccess:request tileID:tileID frame:frame data:data];
-                    };
-                    request.failure = ^(MaplyTileFetchRequest *request, NSError *error) {
-                        [layer fetchRequestFail:request tileID:tileID frame:frame error:error];
-                    };
-                    [batchOps->toStart addObject:request];
+
+                    // This means there's no data fetch.  Interpreter does all the work.
+                    if ([fetchInfo isKindOfClass:[NSNull class]]) {
+                        [layer fetchRequestSuccess:request tileID:tileID frame:frame data:nil];
+                    } else {
+                        request.success = ^(MaplyTileFetchRequest *request, id data) {
+                            [layer fetchRequestSuccess:request tileID:tileID frame:frame data:data];
+                        };
+                        request.failure = ^(MaplyTileFetchRequest *request, NSError *error) {
+                            [layer fetchRequestFail:request tileID:tileID frame:frame error:error];
+                        };
+                        [batchOps->toStart addObject:request];
+                    }
                 } else
                     frameAsset->loadSkipped();
             }
@@ -210,6 +216,12 @@ void QuadImageFrameLoader_ios::processBatchOps(QIFBatchOps *inBatchOps)
 
     [tileFetcher cancelTileFetches:batchOps->toCancel];
     [tileFetcher startTileFetches:batchOps->toStart];
+
+    for (auto tile : batchOps->deletes) {
+        MaplyTileID tileID;
+        tileID.level = tile.level; tileID.x = tile.x; tileID.y = tile.y;
+        [layer tileUnloaded:tileID];
+    }
     
     batchOps->toCancel = nil;
     batchOps->toStart = nil;

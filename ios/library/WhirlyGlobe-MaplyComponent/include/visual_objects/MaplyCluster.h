@@ -35,6 +35,9 @@
 /// Number of objects being clustered
 @property (nonatomic,assign) int numObjects;
 
+/// All the unique IDs from the
+@property (nonatomic,retain) NSArray<NSString *> * __nullable uniqueIDs;
+
 @end
 
 /** 
@@ -116,7 +119,7 @@
     
     Initialize with a list of colors.  Each order of magnitude will use another color.  Must provide at least 1.
   */
-- (nonnull instancetype)initWithColors:(NSArray *__nonnull)colors clusterNumber:(int)clusterNumber size:(CGSize)markerSize viewC:(MaplyBaseViewController *__nonnull)viewC;
+- (nonnull instancetype)initWithColors:(NSArray *__nonnull)colors clusterNumber:(int)clusterNumber size:(CGSize)markerSize viewC:(NSObject<MaplyRenderControllerProtocol> *__nonnull)viewC;
 
 /// The ID number corresponding to the cluster.  Every marker/label with this cluster ID will be grouped together.
 @property (nonatomic,assign) int clusterNumber;

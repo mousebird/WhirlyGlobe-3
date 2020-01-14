@@ -30,6 +30,10 @@
 #import "visual_objects/MaplyPoints.h"
 #import "visual_objects/MaplyCluster.h"
 #import "rendering/MaplyRenderTarget.h"
+#import "control/MaplyActiveObject.h"
+#import "control/MaplyControllerLayer.h"
+
+@class MaplyRemoteTileFetcher;
 
 /// Where we'd like an add to be executed.  If you need immediate feedback,
 ///  then be on the main thread and use MaplyThreadCurrent.  Any is the default.
@@ -124,6 +128,15 @@ typedef NS_ENUM(NSInteger, MaplyRenderType) {
  |kMaplyRendererLightingMode|NSString|This can be set to @"none", in which case we use optimized shaders that do no lighting or "regular".  The latter is the default.|
  */
 - (void)setHints:(NSDictionary *__nonnull)hintsDict;
+
+/**
+    Add a cluster generator for making clustered marker images on demand.
+    
+    When the layout system clusters a bunch of markers or labels together, it needs new images to represent the cluster.
+    
+    You can provide a custom image for each group of markers by filling in one of these generates and passing it in.
+  */
+- (void)addClusterGenerator:(NSObject <MaplyClusterGenerator> *__nonnull)clusterGen;
 
 /**
  Add one or more screen markers to the current scene.
@@ -551,6 +564,41 @@ typedef NS_ENUM(NSInteger, MaplyRenderType) {
 - (MaplyComponentObject *__nullable)addBillboards:(NSArray *__nonnull)billboards desc:(NSDictionary *__nullable)desc mode:(MaplyThreadMode)threadMode;
 
 /**
+    Add a particle system to the scene.
+    
+    This adds a particle system to the scene, but does not kick off any particles.
+    
+    @param partSys The particle system to start.
+    
+    @param desc Any additional standard parameters (none at present).
+    
+    @param threadMode MaplyThreadAny will use another thread, thus not blocking the one you're on.  MaplyThreadCurrent will make the changes immediately, blocking this thread.  For particles, it's best to make a separate thread and use MaplyThreadCurrent.
+  */
+- (MaplyComponentObject *__nullable)addParticleSystem:(MaplyParticleSystem *__nonnull)partSys desc:(NSDictionary *__nullable)desc mode:(MaplyThreadMode)threadMode;
+
+/**
+    Change the render target for a particle system.
+
+    This changes the render target for an existing particle system that's already been created.
+    Can pass in nil, which means the particles are rendered to the screen directly.
+    This change takes place immediately, so call it on the main thread.
+ */
+- (void)changeParticleSystem:(MaplyComponentObject *__nonnull)compObj renderTarget:(MaplyRenderTarget *__nullable)target;
+
+/**
+    Add a batch of particles to the current scene.
+    
+    Particles are short term objects, typically very small.  We create them in large groups for efficience.
+    
+    You'll need to fill out the MaplyParticleSystem initially and then the MaplyParticleBatch to create them.
+    
+    @param batch The batch of particles to add to an active particle system.
+    
+    @param threadMode MaplyThreadAny will use another thread, thus not blocking the one you're on.  MaplyThreadCurrent will make the changes immediately, blocking this thread.  For particles, it's best to make a separate thread and use MaplyThreadCurrent.
+  */
+- (void)addParticleBatch:(MaplyParticleBatch *__nonnull)batch mode:(MaplyThreadMode)threadMode;
+
+/**
  Change the representation of the given vector features.
  
  This will change how any vector features represented by the compObj look.
@@ -732,6 +780,20 @@ typedef NS_ENUM(NSInteger, MaplyRenderType) {
 - (void)removeRenderTarget:(MaplyRenderTarget * _Nonnull)renderTarget;
 
 /**
+    Normally the layout layer runs periodically if you change something or when you move around.
+    You can ask it to run ASAP right here.  Layout runs on its own thread, so there may still be a delay.
+ */
+- (void)runLayout;
+
+/**
+  Request a one time clear for the render target.
+
+  Rather than clearing every frame, you may want to specifically request a clear.  This will
+  be executed at the next frame and then not again.
+*/
+- (void)clearRenderTarget:(MaplyRenderTarget * _Nonnull)renderTarget mode:(MaplyThreadMode)threadMode;
+
+/**
  Remove all information associated with the given MaplyComponentObject's.
  
  Every add call returns a MaplyComponentObject.  This will remove any visible features, textures, selection data, or anything else associated with it.
@@ -829,6 +891,48 @@ typedef NS_ENUM(NSInteger, MaplyRenderType) {
 
 /// Return the renderer type being used
 - (MaplyRenderType)getRenderType;
+
+/**
+    Add the given active object to the scene.
+    
+    Active objects are used for immediate, frame based updates.  They're fairly expensive, so be careful.  After you create one, you add it to the scene here.
+  */
+- (void)addActiveObject:(MaplyActiveObject *__nonnull)theObj;
+
+/// Remove an active object from the scene.
+- (void)removeActiveObject:(MaplyActiveObject *__nonnull)theObj;
+
+/// Remove an array of active objects from the scene
+- (void)removeActiveObjects:(NSArray *__nonnull)theObjs;
+
+/**
+    Add a MaplyControllerLayer to the globe or map.
+    
+    At present, layers are for paged geometry such as image tiles or vector tiles.  You can create someting like a MaplyQuadImageTilesLayer, set it up and then hand it to addLayer: to add to the scene.
+  */
+- (bool)addLayer:(MaplyControllerLayer *__nonnull)layer;
+
+/// Remove a MaplyControllerLayer from the globe or map.
+- (void)removeLayer:(MaplyControllerLayer *__nonnull)layer;
+
+/// Remove zero or more MaplyControllerLayer objects from the globe or map.
+- (void)removeLayers:(NSArray *__nonnull)layers;
+
+/// Remove all the user created MaplyControllerLayer objects from the globe or map.
+- (void)removeAllLayers;
+
+/// Return a tile fetcher we may share between loaders
+- (MaplyRemoteTileFetcher * __nonnull)addTileFetcher:(NSString * __nonnull)name;
+
+/**
+    If in Metal rendering mode, return the Metal device being used.
+  */
+- (id<MTLDevice> __nullable)getMetalDevice;
+
+/**
+   If in Metal rendering mode, return the shader library set up by the toolkit.
+  */
+- (id<MTLLibrary> __nullable)getMetalLibrary;
 
 @end
 

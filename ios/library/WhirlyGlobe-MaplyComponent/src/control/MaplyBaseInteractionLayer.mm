@@ -129,7 +129,7 @@ public:
     SimpleIdentity screenSpaceMotionProgram,screenSpaceDefaultProgram;
 }
 
-- (instancetype)initWithView:(View *)inVisualView
+- (instancetype)initWithView:(WhirlyKit::ViewRef)inVisualView
 {
     self = [super init];
     if (!self)
@@ -138,6 +138,7 @@ public:
 //    NSLog(@"Creating interactLayer %lx",(long)self);
     
     visualView = inVisualView;
+    mainThread = [NSThread currentThread];
     numActiveWorkers = 0;
     
     // Grab everything to force people to wait, hopefully
@@ -653,7 +654,7 @@ public:
             } else {
                 // If we're on a layer thread, we want to flush on that thread
                 auto thisLayerThread = [NSThread currentThread];
-                bool flushHere = thisLayerThread == [NSThread mainThread];
+                bool flushHere = thisLayerThread == mainThread;
                 if (!flushHere) {
                     flushHere = true;
                     for (WhirlyKitLayerThread *layerThread in layerThreads) {
@@ -704,7 +705,7 @@ public:
 
         ThreadChanges theseChanges = *it;
         // Process the setupGL on this thread rather than making the main thread do it
-        if (currentThread != [NSThread mainThread])
+        if (currentThread != mainThread)
             for (auto &change : theseChanges.changes) {
                 if (change)
                     change->setupForRenderer(sceneRender->getRenderSetupInfo());
@@ -776,7 +777,7 @@ public:
     NSDictionary *inDesc = [argArray objectAtIndex:2];
     MaplyThreadMode threadMode = (MaplyThreadMode)[[argArray objectAtIndex:3] intValue];
     
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = scene->getCurrentTime();
     
     bool isMotionMarkers = false;
     if ([[markers objectAtIndex:0] isKindOfClass:[MaplyMovingScreenMarker class]])
@@ -798,6 +799,8 @@ public:
     {
         WhirlyKit::Marker *wgMarker = new WhirlyKit::Marker();
         wgMarker->loc = GeoCoord(marker.loc.x,marker.loc.y);
+        if (marker.uniqueID)
+            wgMarker->uniqueID = [marker.uniqueID asStdString];
         std::vector<MaplyTexture *> texs;
         if (marker.image)
         {
@@ -999,6 +1002,7 @@ public:
     // Pick a representive screen object
     int drawPriority = -1;
     LayoutObject *sampleObj = NULL;
+    NSMutableArray *uniqueIDs = [NSMutableArray array];
     for (auto obj : layoutObjects)
     {
         if (obj->obj.getDrawPriority() > drawPriority)
@@ -1006,12 +1010,18 @@ public:
             drawPriority = obj->obj.getDrawPriority();
             sampleObj = &obj->obj;
         }
+        if (!obj->obj.uniqueID.empty()) {
+            NSString *newStr = [NSString stringWithFormat:@"%s",obj->obj.uniqueID.c_str()];
+            if ([newStr length])
+                [uniqueIDs addObject:newStr];
+        }
     }
     SimpleIdentity progID = sampleObj->getTypicalProgramID();
     
     // Ask for a cluster image
     MaplyClusterInfo *clusterInfo = [[MaplyClusterInfo alloc] init];
     clusterInfo.numObjects = (int)layoutObjects.size();
+    clusterInfo.uniqueIDs = uniqueIDs;
     MaplyClusterGroup *group = [clusterGen makeClusterGroup:clusterInfo];
 
     // Geometry for the new cluster object
@@ -1029,6 +1039,7 @@ public:
     
     retObj.layoutPts = smGeom.coords;
     retObj.selectPts = smGeom.coords;
+    retObj.importance = sampleObj->importance;
     
     // Create the texture
     // Note: Keep this around
@@ -1238,7 +1249,7 @@ public:
     EAGLContext *tmpContext = nil;
     
     // Use the renderer's context
-    if (threadMode == MaplyThreadCurrent && [NSThread mainThread] == [NSThread currentThread])
+    if (threadMode == MaplyThreadCurrent && mainThread == [NSThread currentThread])
     {
         sceneRenderGL->useContext();
     }
@@ -1270,7 +1281,7 @@ public:
     if (!sceneRenderGL)
         return;
 
-    if ([NSThread mainThread] == [NSThread currentThread] && context == sceneRenderGL->getContext())
+    if (mainThread == [NSThread currentThread] && context == sceneRenderGL->getContext())
     {
         [EAGLContext setCurrentContext:nil];
         return;
@@ -1304,7 +1315,7 @@ public:
     // May need a temporary context when setting up screen label textures
     EAGLContext *tmpContext = [self setupTempContext:threadMode];
 
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = scene->getCurrentTime();
     
     bool isMotionLabels = false;
     if ([[labels objectAtIndex:0] isKindOfClass:[MaplyMovingScreenLabel class]])
@@ -1344,7 +1355,7 @@ public:
         }
 
         LabelInfoRef thisLabelInfo;
-        if ([inDesc objectForKey:kMaplyTextColor] || label.layoutImportance != MAXFLOAT ||
+        if ([inDesc objectForKey:kMaplyTextColor] || label.layoutImportance < MAXFLOAT ||
             [inDesc objectForKey:kMaplyTextLineSpacing]) {
             thisLabelInfo = LabelInfoRef(new LabelInfo(true));
 
@@ -1352,7 +1363,7 @@ public:
                 thisLabelInfo->hasTextColor = true;
                 thisLabelInfo->textColor = [label.color asRGBAColor];
             }
-            if (label.layoutImportance != MAXFLOAT)
+            if (label.layoutImportance < MAXFLOAT)
             {
                 thisLabelInfo->layoutEngine = true;
                 thisLabelInfo->layoutImportance = label.layoutImportance;
@@ -2305,9 +2316,13 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
 
     NSArray *geom = argArray[0];
     MaplyComponentObject *compObj = argArray[1];
-//    NSMutableDictionary *inDesc = argArray[2];
+    NSMutableDictionary *inDesc = argArray[2];
     MaplyThreadMode threadMode = (MaplyThreadMode)[[argArray objectAtIndex:3] intValue];
-    
+
+    GeometryInfo geomInfo;
+    [self resolveInfoDefaults:inDesc info:&geomInfo defaultShader:kMaplyDefaultTriangleShader];
+    [self resolveDrawPriority:inDesc info:&geomInfo drawPriority:kMaplyStickerDrawPriorityDefault offset:0];
+
     GeometryManager *geomManager = (GeometryManager *)scene->getManager(kWKGeometryManager);
     
     // Add each raw geometry model
@@ -2318,7 +2333,7 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
         for (MaplyGeomModel *model in geom)
         {
             // This is intended to be instanced, but we can use it
-            SimpleIdentity geomID = geomManager->addBaseGeometry(model->rawGeom, changes);
+            SimpleIdentity geomID = geomManager->addBaseGeometry(model->rawGeom, geomInfo, changes);
             // If we turn it on
             SimpleIDSet geomIDs;
             geomIDs.insert(geomID);
@@ -3301,6 +3316,9 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
 
 - (void)enableObjectsImpl:(NSArray *)userObjs enable:(bool)enable changes:(ChangeSet &)changes
 {
+    if (isShuttingDown || (!layerThread && !offlineMode))
+        return;
+
     for (MaplyComponentObject *compObj in userObjs)
         compManager->enableComponentObject(compObj->contents->getId(), enable, changes);
 }
@@ -3395,7 +3413,7 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
     
     pt = visualView->unwrapCoordinate(pt);
     
-    ViewStateRef viewState = vc->visualView->makeViewState(vc->renderControl->sceneRenderer.get());
+    ViewStateRef viewState = vc->renderControl->visualView->makeViewState(vc->renderControl->sceneRenderer.get());
     
     auto rets = compManager->findVectors(Point2d(pt.x(),pt.y()),20.0,viewState,vc->renderControl->sceneRenderer->getFramebufferSizeScaled(),multi);
     

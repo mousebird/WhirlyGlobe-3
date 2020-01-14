@@ -26,7 +26,7 @@
 #import "control/MaplyViewTracker.h"
 #import "visual_objects/MaplyComponentObject.h"
 #import "MaplySharedAttributes.h"
-#import "control/MaplyViewControllerLayer.h"
+#import "control/MaplyControllerLayer.h"
 #import "rendering/MaplyLight.h"
 #import "rendering/MaplyShader.h"
 #import "control/MaplyActiveObject.h"
@@ -148,16 +148,9 @@
 //@property (nonatomic,weak) NSObject<MaplyElevationSourceDelegate> *__nullable elevDelegate;
 
 /** 
-    If set we'll create a new thread for every layer the user adds.
-    
-    The only layers within the toolkit are for image tile paging.  So effectively this creates a thread for every image layer you add.  This is going to result in faster image paging, but higher CPU usage and a bit more memory.  On by default.
-  */
-@property (nonatomic,assign) bool threadPerLayer;
-
-/** 
     Set the offset for the screen space objects.
     
-    In general you want the screen space objects to appear on top of everything else.  There used to be structural versions for this, but now you can mix and match where everything appears.  This controls the offset that's used to push screen space objects behind everything else in the list (and thus, on top).
+    In general you want the screen space objects to appear on top of everything else.  There used to be structural reasons for this, but now you can mix and match where everything appears.  This controls the offset that's used to push screen space objects behind everything else in the list (and thus, on top).
     
     If you set this to 0, you can control the ordering of everything more precisely.
  */
@@ -1086,6 +1079,12 @@
   */
 - (void)setMaxLayoutObjects:(int)maxLayoutObjects;
 
+/**
+    Normally the layout layer runs periodically if you change something or when you move around.
+    You can ask it to run ASAP right here.  Layout runs on its own thread, so there may still be a delay.
+ */
+- (void)runLayout;
+
 /// Calls removeObjects:mode: with MaplyThreadAny.
 - (void)removeObject:(MaplyComponentObject *__nonnull)theObj;
 
@@ -1148,19 +1147,19 @@
 - (void)removeActiveObjects:(NSArray *__nonnull)theObjs;
 
 /** 
-    Add a MaplyViewControllerLayer to the globe or map.
+    Add a MaplyControllerLayer to the globe or map.
     
     At present, layers are for paged geometry such as image tiles or vector tiles.  You can create someting like a MaplyQuadImageTilesLayer, set it up and then hand it to addLayer: to add to the scene.
   */
-- (bool)addLayer:(MaplyViewControllerLayer *__nonnull)layer;
+- (bool)addLayer:(MaplyControllerLayer *__nonnull)layer;
 
-/// Remove a MaplyViewControllerLayer from the globe or map.
-- (void)removeLayer:(MaplyViewControllerLayer *__nonnull)layer;
+/// Remove a MaplyControllerLayer from the globe or map.
+- (void)removeLayer:(MaplyControllerLayer *__nonnull)layer;
 
-/// Remove zero or more MaplyViewControllerLayer objects from the globe or map.
+/// Remove zero or more MaplyControllerLayer objects from the globe or map.
 - (void)removeLayers:(NSArray *__nonnull)layers;
 
-/// Remove all the user created MaplyViewControllerLayer objects from the globe or map.
+/// Remove all the user created MaplyControllerLayer objects from the globe or map.
 - (void)removeAllLayers;
 
 /** 
@@ -1400,9 +1399,6 @@
     All layers loaded by user than are currently loaded.
  */
 -(NSArray * _Nonnull)loadedLayers;
-
-/// Return a tile fetcher we may share between loaders
-- (MaplyRemoteTileFetcher * __nonnull)addTileFetcher:(NSString * __nonnull)name;
 
 /// Return the renderer type being used
 - (MaplyRenderType)getRenderType;

@@ -27,10 +27,9 @@ typedef NS_OPTIONS(NSUInteger, MaplyTestCaseImplementations) {
 - (void)startGlobe:(UINavigationController * __nonnull)nav;
 - (void)startMap:(UINavigationController * __nonnull)nav;
 
-// these prototypes are necessary for Swift
 - (void)setUpWithGlobe:(WhirlyGlobeViewController * _Nonnull)globeVC;
-
 - (void)setUpWithMap:(MaplyViewController * _Nonnull)mapVC;
+
 - (void)stop;
 - (MaplyCoordinateSystem * _Nullable)customCoordSystem;
 
