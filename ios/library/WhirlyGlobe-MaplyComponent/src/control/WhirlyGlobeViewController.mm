@@ -27,48 +27,6 @@ using namespace Eigen;
 using namespace WhirlyKit;
 using namespace WhirlyGlobe;
 
-@implementation WhirlyGlobeViewControllerAnimationState
-
-- (instancetype)init
-{
-    self = [super init];
-    _heading = DBL_MAX;
-    _height = 1.0;
-    _tilt = DBL_MAX;
-    _roll = 0.0;
-    _pos.x = _pos.y = 0.0;
-    _screenPos = {-1,-1};
-    _globeCenter = {-1000,-1000};
-    
-    return self;
-}
-
-+ (WhirlyGlobeViewControllerAnimationState *)Interpolate:(double)t from:(WhirlyGlobeViewControllerAnimationState *)stateA to:(WhirlyGlobeViewControllerAnimationState *)stateB
-{
-    WhirlyGlobeViewControllerAnimationState *newState = [[WhirlyGlobeViewControllerAnimationState alloc] init];
-    
-    newState.heading = (stateB.heading-stateA.heading)*t + stateA.heading;
-    newState.height = (stateB.height-stateA.height)*t + stateA.height;
-    newState.tilt = (stateB.tilt-stateA.tilt)*t + stateA.tilt;
-    newState.pos = MaplyCoordinateDMake((stateB.pos.x-stateA.pos.x)*t + stateA.pos.x,(stateB.pos.y-stateA.pos.y)*t + stateA.pos.y);
-    newState.roll = (stateB.roll-stateA.roll)*t + stateA.roll;
-    if (stateA.screenPos.x >= 0.0 && stateA.screenPos.y >= 0.0 &&
-        stateB.screenPos.x >= 0.0 && stateB.screenPos.y >= 0.0)
-    {
-        newState.screenPos = CGPointMake((stateB.screenPos.x - stateA.screenPos.x)*t + stateA.screenPos.x,
-                                         (stateB.screenPos.y - stateA.screenPos.y)*t + stateA.screenPos.y);
-    } else
-        newState.screenPos = stateB.screenPos;
-    if (stateA.globeCenter.x != -1000 && stateB.globeCenter.x != -1000) {
-        newState.globeCenter = CGPointMake((stateB.globeCenter.x - stateA.globeCenter.x)*t + stateA.globeCenter.x,
-                                           (stateB.globeCenter.y - stateA.globeCenter.y)*t + stateA.globeCenter.y);
-    }
-    
-    return newState;
-}
-
-@end
-
 @implementation WhirlyGlobeViewControllerSimpleAnimationDelegate
 {
     WhirlyGlobeViewControllerAnimationState *startState;
@@ -206,7 +164,6 @@ public:
 {
     [super clear];
     
-    globeScene = NULL;
     globeView = nil;
     globeInteractLayer = nil;
     
@@ -256,7 +213,7 @@ public:
 
 - (MaplyBaseInteractionLayer *) loadSetup_interactionLayer
 {
-    globeInteractLayer = [[WGInteractionLayer alloc] initWithGlobeView:globeView.get()];
+    globeInteractLayer = [[WGInteractionLayer alloc] initWithGlobeView:globeView];
     globeInteractLayer.viewController = self;
     return globeInteractLayer;
 }
@@ -267,7 +224,7 @@ public:
     [super loadSetup];
     
     // Wire up the gesture recognizers
-    panDelegate = [WhirlyGlobePanDelegate panDelegateForView:wrapView globeView:globeView.get() useCustomPanRecognizer:self.inScrollView];
+    panDelegate = [WhirlyGlobePanDelegate panDelegateForView:wrapView globeView:globeView useCustomPanRecognizer:self.inScrollView];
     tapDelegate = [WhirlyGlobeTapDelegate tapDelegateForView:wrapView globeView:globeView.get()];
     // These will activate the appropriate gesture
     self.panGesture = true;
@@ -413,7 +370,7 @@ public:
     {
         if (!pinchDelegate)
         {
-            pinchDelegate = [WhirlyGlobePinchDelegate pinchDelegateForView:wrapView globeView:globeView.get()];
+            pinchDelegate = [WhirlyGlobePinchDelegate pinchDelegateForView:wrapView globeView:globeView];
             pinchDelegate.zoomAroundPinch = self.zoomAroundPinch;
             pinchDelegate.doRotation = false;
             pinchDelegate.northUp = panDelegate.northUp;
@@ -733,6 +690,9 @@ public:
 // Rotate to the given location over time
 - (void)rotateToPoint:(GeoCoord)whereGeo time:(TimeInterval)howLong
 {
+    if (!renderControl)
+        return;
+
     // If we were rotating from one point to another, stop
     globeView->cancelAnimation();
     
@@ -747,6 +707,9 @@ public:
 
 - (void)rotateToPointD:(Point2d)whereGeo time:(TimeInterval)howLong
 {
+    if (!renderControl)
+        return;
+
     // If we were rotating from one point to another, stop
     globeView->cancelAnimation();
     
@@ -762,6 +725,9 @@ public:
 // External facing version of rotateToPoint
 - (void)animateToPosition:(MaplyCoordinate)newPos time:(TimeInterval)howLong
 {
+    if (!renderControl)
+        return;
+
     if (isnan(newPos.x) || isnan(newPos.y))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to animationToPosition:");
@@ -829,6 +795,9 @@ public:
 
 - (bool)animateToPosition:(MaplyCoordinate)newPos height:(float)newHeight heading:(float)newHeading time:(TimeInterval)howLong
 {
+    if (!renderControl)
+        return false;
+
     if (isnan(newPos.x) || isnan(newPos.y) || isnan(newHeight))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to animationToPosition:");
@@ -850,6 +819,9 @@ public:
 
 - (bool)animateToPositionD:(MaplyCoordinateD)newPos height:(double)newHeight heading:(double)newHeading time:(TimeInterval)howLong
 {
+    if (!renderControl)
+        return false;
+
     if (isnan(newPos.x) || isnan(newPos.y) || isnan(newHeight))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to animationToPosition:");
@@ -871,6 +843,9 @@ public:
 
 - (bool)animateToPosition:(MaplyCoordinate)newPos onScreen:(CGPoint)loc height:(float)newHeight heading:(float)newHeading time:(TimeInterval)howLong {
     
+    if (!renderControl)
+        return false;
+
     if (isnan(newPos.x) || isnan(newPos.y) || isnan(newHeight))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to animationToPosition:");
@@ -917,6 +892,9 @@ public:
 // External facing set position
 - (void)setPosition:(MaplyCoordinate)newPos
 {
+    if (!renderControl)
+        return;
+
     if (isnan(newPos.x) || isnan(newPos.y))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to setPosition:");
@@ -932,6 +910,9 @@ public:
 
 - (void)setPosition:(MaplyCoordinate)newPos height:(float)height
 {
+    if (!renderControl)
+        return;
+
     if (isnan(newPos.x) || isnan(newPos.y) || isnan(height))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to setPosition:");
@@ -944,6 +925,9 @@ public:
 
 - (void)setPositionD:(MaplyCoordinateD)newPos height:(double)height
 {
+    if (!renderControl)
+        return;
+
     if (isnan(newPos.x) || isnan(newPos.y) || isnan(height))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid location passed to setPosition:");
@@ -959,6 +943,9 @@ public:
 
 - (void)setHeading:(float)heading
 {
+    if (!renderControl)
+        return;
+
     if (isnan(heading))
     {
         NSLog(@"WhirlyGlobeViewController: Invalid heading passed to setHeading:");
@@ -991,6 +978,9 @@ public:
 
 - (float)heading
 {
+    if (!renderControl)
+        return 0.0;
+
     float retHeading = 0.0;
 
     // Figure out where the north pole went
@@ -1003,25 +993,39 @@ public:
 
 - (MaplyCoordinate)getPosition
 {
-	GeoCoord geoCoord = globeView->coordAdapter->getCoordSystem()->localToGeographic(globeView->coordAdapter->displayToLocal(globeView->currentUp()));
+    if (!renderControl)
+        return {0.0, 0.0};
+
+    GeoCoord geoCoord = globeView->coordAdapter->getCoordSystem()->localToGeographic(globeView->coordAdapter->displayToLocal(globeView->currentUp()));
 
 	return {.x = geoCoord.lon(), .y = geoCoord.lat()};
 }
 
 - (MaplyCoordinateD)getPositionD
 {
-	Point2d geoCoord = globeView->coordAdapter->getCoordSystem()->localToGeographicD(globeView->coordAdapter->displayToLocal(globeView->currentUp()));
+    if (!renderControl)
+        return {0.0, 0.0};
+
+    Point2d geoCoord = globeView->coordAdapter->getCoordSystem()->localToGeographicD(globeView->coordAdapter->displayToLocal(globeView->currentUp()));
 
 	return {.x = geoCoord.x(), .y = geoCoord.y()};
 }
 
 - (double)getHeight
 {
+    if (!globeView)
+        return 0.0;
+    
 	return globeView->getHeightAboveGlobe();
 }
 
 - (void)getPosition:(MaplyCoordinate *)pos height:(float *)height
 {
+    if (!renderControl) {
+        *height = 0.0;
+        return;
+    }
+    
     *height = globeView->getHeightAboveGlobe();
     Point3d localPt = globeView->currentUp();
     GeoCoord geoCoord = globeView->coordAdapter->getCoordSystem()->localToGeographic(globeView->coordAdapter->displayToLocal(localPt));
@@ -1030,6 +1034,11 @@ public:
 
 - (void)getPositionD:(MaplyCoordinateD *)pos height:(double *)height
 {
+    if (!renderControl) {
+        pos->x = 0.0;  pos->y = 0.0;  *height = 0.0;
+        return;
+    }
+
     *height = globeView->getHeightAboveGlobe();
     Point3d localPt = globeView->currentUp();
     Point2d geoCoord = globeView->coordAdapter->getCoordSystem()->localToGeographicD(globeView->coordAdapter->displayToLocal(localPt));
@@ -1409,11 +1418,11 @@ public:
     if (!renderControl)
         return false;
     
-    Point3d pt = visualView->coordAdapter->localToDisplay(visualView->coordAdapter->getCoordSystem()->geographicToLocal3d(GeoCoord(geoCoord.x,geoCoord.y)));
+    Point3d pt = renderControl->visualView->coordAdapter->localToDisplay(renderControl->visualView->coordAdapter->getCoordSystem()->geographicToLocal3d(GeoCoord(geoCoord.x,geoCoord.y)));
     Point3f pt3f(pt.x(),pt.y(),pt.z());
     
-    Eigen::Matrix4d modelTrans4d = visualView->calcModelMatrix();
-    Eigen::Matrix4d viewTrans4d = visualView->calcViewMatrix();
+    Eigen::Matrix4d modelTrans4d = renderControl->visualView->calcModelMatrix();
+    Eigen::Matrix4d viewTrans4d = renderControl->visualView->calcViewMatrix();
     Eigen::Matrix4d modelAndViewMat4d = viewTrans4d * modelTrans4d;
     Eigen::Matrix4f modelAndViewMat = Matrix4dToMatrix4f(modelAndViewMat4d);
     Eigen::Matrix4f modelAndViewNormalMat = modelAndViewMat.inverse().transpose();
@@ -1440,7 +1449,7 @@ public:
 	Eigen::Matrix4d theTransform = globeView->calcFullMatrix();
     if (globeView->pointOnSphereFromScreen(screenPt2f, theTransform, renderControl->sceneRenderer->getFramebufferSizeScaled(), hit, true))
     {
-        GeoCoord geoCoord = visualView->coordAdapter->getCoordSystem()->localToGeographic(visualView->coordAdapter->displayToLocal(hit));
+        GeoCoord geoCoord = renderControl->visualView->coordAdapter->getCoordSystem()->localToGeographic(renderControl->visualView->coordAdapter->displayToLocal(hit));
         retCoord->x = geoCoord.x();
         retCoord->y = geoCoord.y();
         
@@ -1470,7 +1479,7 @@ public:
 	Eigen::Matrix4d theTransform = globeView->calcFullMatrix();
     if (globeView->pointOnSphereFromScreen(Point2f(screenPt.x,screenPt.y), theTransform, renderControl->sceneRenderer->getFramebufferSizeScaled(), hit, true))
     {
-        Point3d geoC = visualView->coordAdapter->getCoordSystem()->localToGeocentric(visualView->coordAdapter->displayToLocal(hit));
+        Point3d geoC = renderControl->visualView->coordAdapter->getCoordSystem()->localToGeocentric(renderControl->visualView->coordAdapter->displayToLocal(hit));
         retCoords[0] = geoC.x();  retCoords[1] = geoC.y();  retCoords[2] = geoC.z();
         
         // Note: Obviously doing something stupid here
@@ -1546,7 +1555,7 @@ public:
 // Called every frame from within the globe view
 - (void)updateView:(GlobeView *)inGlobeView
 {
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = renderControl->scene->getCurrentTime();
     if (!animationDelegate)
     {
         globeView->cancelAnimation();
@@ -1573,7 +1582,7 @@ public:
 
 - (void)animateWithDelegate:(NSObject<WhirlyGlobeViewControllerAnimationDelegate> *)inAnimationDelegate time:(TimeInterval)howLong
 {
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = renderControl->scene->getCurrentTime();
     animationDelegate = inAnimationDelegate;
     animationDelegateEnd = now+howLong;
 
@@ -1627,7 +1636,7 @@ public:
     
     // Orient with north up.  Either because we want that or we're about do do a heading
     Eigen::Quaterniond posRotNorth = posRot;
-    if (panDelegate.northUp || animState.heading != MAXFLOAT)
+    if (panDelegate.northUp || animState.heading < MAXFLOAT)
     {
         // We'd like to keep the north pole pointed up
         // So we look at where the north pole is going
@@ -1648,7 +1657,7 @@ public:
     
     // We can't have both northUp and a heading
     Eigen::Quaterniond finalQuat = posRotNorth;
-    if (!panDelegate.northUp && animState.heading != MAXFLOAT)
+    if (!panDelegate.northUp && animState.heading < MAXFLOAT)
     {
         Eigen::AngleAxisd headingRot(animState.heading,worldLoc);
         finalQuat = posRotNorth * headingRot;
@@ -1658,7 +1667,7 @@ public:
     globeView->setHeightAboveGlobe(animState.height,false);
     
     // Set the tilt either directly or as a consequence of the height
-    if (animState.tilt == MAXFLOAT)
+    if (animState.tilt >= MAXFLOAT)
         globeView->setTilt(tiltControlDelegate->tiltFromHeight(globeView->getHeightAboveGlobe()));
     else
         globeView->setTilt(animState.tilt);

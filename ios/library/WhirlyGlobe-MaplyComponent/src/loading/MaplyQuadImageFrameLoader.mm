@@ -58,11 +58,13 @@ NSString * const MaplyQuadImageLoaderFetcherName = @"QuadImageLoader";
         return;
     
     _period = period;
+    if (!scene)
+        return;
     // Adjust the start time to make the quad loader appear not to move initially
     if (numFrames > 1) {
-        startTime = TimeGetCurrent()-[loader getCurrentImage]/(numFrames-1) * _period;
+        startTime = scene->getCurrentTime()-[loader getCurrentImage]/(numFrames-1) * _period;
     } else if (numFrames > 0) {
-        startTime = TimeGetCurrent()-[loader getCurrentImage] * _period;
+        startTime = scene->getCurrentTime()-[loader getCurrentImage] * _period;
     }
 }
 
@@ -81,7 +83,7 @@ NSString * const MaplyQuadImageLoaderFetcherName = @"QuadImageLoader";
     if (!viewC || !loader)
         return false;
 
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = scene->getCurrentTime();
     TimeInterval totalPeriod = _period + _pauseLength;
     double when = fmod(now-startTime,totalPeriod);
     if (when >= _period)
@@ -179,7 +181,7 @@ NSString * const MaplyQuadImageLoaderFetcherName = @"QuadImageLoader";
     loader->layer = self;
 
     // Hook into the active updater to organize geometry for rendering
-    self.viewC->renderControl->scene->addActiveModel(loader);
+    [self.viewC getRenderControl]->scene->addActiveModel(loader);
 
     if (![super delayedInit])
         return false;

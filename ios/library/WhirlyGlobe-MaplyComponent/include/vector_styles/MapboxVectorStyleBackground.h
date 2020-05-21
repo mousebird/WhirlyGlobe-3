@@ -18,7 +18,7 @@
  *
  */
 
-#import "vector_styles/MapboxVectorStyleSet.h"
+#import "MapboxVectorStyleSet.h"
 
 /**
   This class corresponds to the paint portion of the Mapbox Vector Style definition
@@ -26,11 +26,8 @@
  */
 @interface MapboxVectorBackgroundPaint : NSObject
 
-/**
-  
- */
-@property (nonatomic,strong) UIColor *color;
-@property (nonatomic) double opacity;
+@property (nonatomic) MapboxTransColor *color;
+@property (nonatomic) MapboxTransDouble *opacity;
 
 /// :nodoc:
 - (id)initWithStyleEntry:(NSDictionary *)styleEntry styleSet:(MapboxVectorStyleSet *)styleSet viewC:(NSObject<MaplyRenderControllerProtocol> *)viewC;

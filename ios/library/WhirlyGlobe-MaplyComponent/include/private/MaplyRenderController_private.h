@@ -37,12 +37,18 @@
 @interface MaplyRenderController()<WhirlyKitSnapshot>
 {
 @public
+    /// A pointer to the 3D view.  The subclasses are keeping points with the right subclass.
+    WhirlyKit::ViewRef visualView;
+
     // OpenGL or Metal
     WhirlyKit::SceneRenderer::Type renderType;
     
     // Scene renderer... renders the scene
     WhirlyKit::SceneRendererRef sceneRenderer;
     
+    // General pointer to the view
+    WhirlyKit::CoordSystemDisplayAdapter *coordAdapter;
+
     // Our own interaction layer does most of the work
     MaplyBaseInteractionLayer *interactLayer;
 
@@ -60,6 +66,37 @@
         
     /// Used to be screen objects were always drawn last.  Now that's optional.
     int screenDrawPriorityOffset;
+    
+    /// The thread this render controller started on.  Usually it'll be the main thread.
+    NSThread * __weak mainThread;
+    
+    WhirlyKitLayerThread *baseLayerThread;
+    WhirlyKitLayoutLayer *layoutLayer;
+    NSMutableArray *layerThreads;
+
+    // Layers (and associated data) created for the user
+    NSMutableArray *userLayers;
+    
+    /// Active models
+    NSMutableArray *activeObjects;
+    
+    /// The default cluster generator (group 0)
+    MaplyBasicClusterGenerator *defaultClusterGenerator;
+    
+    /// Used to render font glyphs on this platform
+    WhirlyKit::FontTextureManager_iOSRef fontTexManager;
+    
+    /// Current draw priority if we're assigning them ourselves
+    int layerDrawPriority;
+
+    /// Shared sampling layers (used for loaders)
+    std::vector<MaplyQuadSamplingLayer *> samplingLayers;
+    
+    /// Shared tile fetcher used by default for loaders
+    std::vector<MaplyRemoteTileFetcher *> tileFetchers;
+
+    /// Number of simultaneous tile fetcher connections (per tile fetcher)
+    int tileFetcherConnections;
 }
 
 - (int)screenObjectDrawPriorityOffset;
@@ -82,5 +119,16 @@
 
 /// Called internally to end a block of work being done
 - (void) endOfWork;
+
+/// Look for a sampling layer that matches the given parameters
+/// We'll also keep it around until the user lets us know we're done
+- (MaplyQuadSamplingLayer *)findSamplingLayer:(const WhirlyKit::SamplingParams &)params forUser:(WhirlyKit::QuadTileBuilderDelegateRef)userObj;
+
+/// The given user object is done with the given sampling layer.  So we may shut it down.
+- (void)releaseSamplingLayer:(MaplyQuadSamplingLayer *)layer forUser:(WhirlyKit::QuadTileBuilderDelegateRef)userObj;
+
+// Used for setup by the view controllers
+- (void)loadSetup_scene:(MaplyBaseInteractionLayer *)newInteractLayer;
+- (void)loadSetup_view:(WhirlyKit::ViewRef)view;
 
 @end

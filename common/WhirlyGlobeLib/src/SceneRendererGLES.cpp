@@ -232,7 +232,7 @@ void SceneRendererGLES::render(TimeInterval duration)
         
     theView->animate();
     
-    TimeInterval now = TimeGetCurrent();
+    TimeInterval now = scene->getCurrentTime();
 
     lastDraw = now;
     
@@ -316,7 +316,7 @@ void SceneRendererGLES::render(TimeInterval duration)
         baseFrameInfo.modelTrans4d = modelTrans4d;
         baseFrameInfo.scene = scene;
         baseFrameInfo.frameLen = duration;
-        baseFrameInfo.currentTime = TimeGetCurrent();
+        baseFrameInfo.currentTime = scene->getCurrentTime();
         baseFrameInfo.projMat = projMat;
         baseFrameInfo.projMat4d = projMat4d;
         baseFrameInfo.mvpMat = mvpMat;
@@ -428,10 +428,10 @@ void SceneRendererGLES::render(TimeInterval duration)
             offFrameInfo.pvMat = pvMat4f;
             offFrameInfo.pvMat4d = pvMat;
             
-            DrawableRefSet rawDrawables = scene->getDrawables();
-            for (DrawableRefSet::iterator it = rawDrawables.begin(); it != rawDrawables.end(); ++it)
+            const DrawableRefSet &rawDrawables = scene->getDrawables();
+            for (auto it : rawDrawables)
             {
-                DrawableGLES *theDrawable = dynamic_cast<DrawableGLES *>(it->second.get());
+                DrawableGLESRef theDrawable = std::dynamic_pointer_cast<DrawableGLES>(it.second);
                 if (theDrawable->isOn(&offFrameInfo))
                 {
                     const Matrix4d *localMat = theDrawable->getMatrix();
@@ -440,9 +440,9 @@ void SceneRendererGLES::render(TimeInterval duration)
                         Eigen::Matrix4d newMvpMat = thisMvpMat * (*localMat);
                         Eigen::Matrix4d newMvMat = modelAndViewMat4d * (*localMat);
                         Eigen::Matrix4d newMvNormalMat = newMvMat.inverse().transpose();
-                        drawList.push_back(DrawableContainer(theDrawable,newMvpMat,newMvMat,newMvNormalMat));
+                        drawList.push_back(DrawableContainer(theDrawable.get(),newMvpMat,newMvMat,newMvNormalMat));
                     } else
-                        drawList.push_back(DrawableContainer(theDrawable,thisMvpMat,modelAndViewMat4d,modelAndViewNormalMat4d));
+                        drawList.push_back(DrawableContainer(theDrawable.get(),thisMvpMat,modelAndViewMat4d,modelAndViewNormalMat4d));
                 }
             }
         }
@@ -655,7 +655,7 @@ void SceneRendererGLES::render(TimeInterval duration)
     // Update the frames per sec
     if (perfInterval > 0 && frameCount > perfInterval)
     {
-        TimeInterval now = TimeGetCurrent();
+        TimeInterval now = scene->getCurrentTime();
         TimeInterval howLong =  now - frameCountStart;;
         framesPerSec = frameCount / howLong;
         frameCountStart = now;

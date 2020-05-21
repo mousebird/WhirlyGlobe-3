@@ -39,6 +39,12 @@ using namespace WhirlyKit;
     return [super initWithLoader:loader];
 }
 
+- (void)addCompObj:(MaplyComponentObject *)compObj
+{
+    if (compObj)
+        loadReturn->compObjs.push_back(compObj->contents);
+}
+
 - (void)addCompObjs:(NSArray<MaplyComponentObject *> *)compObjs
 {
     for (MaplyComponentObject *compObj in compObjs)
@@ -84,13 +90,9 @@ using namespace WhirlyKit;
     self->maxLevel = tileInfo.maxZoom;
     self->valid = true;
     
-    MaplyQuadPagingLoader *strongSelf = self;
-
     // Start things out after a delay
     // This lets the caller mess with settings
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [strongSelf delayedInit];
-    });
+    [self performSelector:@selector(delayedInit) withObject:nil afterDelay:0.0];
     
     return self;
 }
@@ -103,8 +105,9 @@ using namespace WhirlyKit;
         tileFetcher = [self.viewC addTileFetcher:MaplyQuadImageLoaderFetcherName];
     }
     loader->tileFetcher = tileFetcher;
+    loader->layer = self;
 
-    samplingLayer = [self.viewC findSamplingLayer:params forUser:self->loader];
+    samplingLayer = [[self.viewC getRenderControl] findSamplingLayer:params forUser:self->loader];
     // Do this again in case they changed them
     loader->setSamplingParams(params);
     loader->setFlipY(self.flipY);

@@ -31,7 +31,9 @@
 /**
  An interpreter for Mapbox Vector Tiles.
  
- This will turn vector tiles into images, visual objects, or a combination of the two.
+ This will turn vector tiles into images, visual objects, or a combination of the two.  Loader interpreters like
+    this one can be used by Loaders that talk to ondevice objects (such as MBTiles files) or remote tile
+    sources.
  */
 @interface MapboxVectorInterpreter : NSObject<MaplyLoaderInterpreter>
 
@@ -44,7 +46,7 @@
 - (instancetype _Nullable ) initWithImageStyle:(MapboxVectorStyleSet *__nonnull)imageStyle
                          offlineRender:(MaplyRenderController *__nonnull)renderControl
                            vectorStyle:(NSObject<MaplyVectorStyleDelegate> *__nonnull)vectorStyle
-                                 viewC:(MaplyBaseViewController *__nonnull)viewC;
+                                 viewC:(NSObject<MaplyRenderControllerProtocol> *__nonnull)viewC;
 
 /** This version of the init builds visual features for vector tiles.
  
@@ -52,6 +54,6 @@
     on how your style is configured.
   */
 - (instancetype __nullable) initWithVectorStyle:(NSObject<MaplyVectorStyleDelegate> *__nonnull)vectorStyle
-                                          viewC:(MaplyBaseViewController *__nonnull)viewC;
+                                          viewC:(NSObject<MaplyRenderControllerProtocol> *__nonnull)viewC;
 
 @end

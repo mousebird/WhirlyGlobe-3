@@ -58,6 +58,19 @@ TextureMTL::TextureMTL(const std::string &name,UIImage *inImage,int inWidth,int 
     
     texData = RawDataRef(new RawNSDataReader(data));
 }
+
+TextureMTL::TextureMTL(const std::string &name,UIImage *inImage)
+: Texture(name), TextureBase(name), TextureBaseMTL(name)
+{
+    NSData *data = [inImage rawDataRetWidth:&width height:&height roundUp:true];
+    if (!data)
+        return;
+    
+    if ((width == 0 || height == 0) && data)
+        NSLog(@"TextureMTL: Got textures with 0 width or height");
+    
+    texData = RawDataRef(new RawNSDataReader(data));
+}
     
 RawDataRef TextureMTL::convertData()
 {
@@ -192,6 +205,10 @@ bool TextureMTL::createInRenderer(const RenderSetupInfo *inSetupInfo)
             pixFormat = MTLPixelFormatRGBA32Float;
             bytesPerRow = 16*width;
             break;
+        case TexTypeDepthFloat32:
+            pixFormat = MTLPixelFormatDepth32Float;
+            bytesPerRow = 4*width;
+            break;
     }
     
     // Set up the texture and upload the data
@@ -211,6 +228,8 @@ bool TextureMTL::createInRenderer(const RenderSetupInfo *inSetupInfo)
             RawDataRef convData = convertData();
             [mtlID replaceRegion:region mipmapLevel:0 withBytes:convData->getRawData() bytesPerRow:bytesPerRow];
         }
+    } else {
+        NSLog(@"Error setting up Metal Texture");
     }
     
     texData.reset();

@@ -742,10 +742,17 @@ public class BaseController implements RenderController.TaskManager, RenderContr
      */
     public void addPostSurfaceRunnable(Runnable run)
     {
-        if (rendererAttached)
-            activity.runOnUiThread(run);
-        else
-            postSurfaceRunnables.add(run);
+		boolean runNow = false;
+		synchronized (this) {
+			if (rendererAttached)
+				runNow = true;
+			else
+				postSurfaceRunnables.add(run);
+		}
+		if (runNow) {
+			Handler handler = new Handler(activity.getMainLooper());
+			handler.post(run);
+		}
     }
 
 	int displayRate = 2;
@@ -930,10 +937,17 @@ public class BaseController implements RenderController.TaskManager, RenderContr
 	 * @param ll Lower left corner.
 	 * @param ur Upper right corner.
 	 */
-	public void setViewExtents(Point2d ll,Point2d ur)
+	public void setViewExtents(final Point2d ll,final Point2d ur)
 	{
-		if (!running || view == null || renderWrapper == null || renderWrapper.maplyRender == null || renderControl.frameSize == null)
+		if (!running || view == null || renderWrapper == null || renderWrapper.maplyRender == null || renderControl.frameSize == null) {
+			addPostSurfaceRunnable(new Runnable() {
+				@Override
+				public void run() {
+					setViewExtents(ll,ur);
+				}
+			});
 			return;
+		}
 
 		CoordSystemDisplayAdapter coordAdapter = view.getCoordAdapter();
 		if (coordAdapter == null)
@@ -2123,6 +2137,19 @@ public class BaseController implements RenderController.TaskManager, RenderContr
 		setEGLContext(null);
 
 		return widths[1];
+	}
+
+	/**
+	 * Return the frame size we're rendering to.
+	 */
+	public Point2d getFrameSize()
+	{
+		if (renderWrapper == null || renderWrapper.maplyRender == null) {
+			return null;
+		}
+
+		int[] frameSize = renderControl.getFrameBufferSize();
+		return new Point2d(frameSize[0],frameSize[1]);
 	}
 
 	/**

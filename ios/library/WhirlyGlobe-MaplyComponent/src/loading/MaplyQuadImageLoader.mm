@@ -22,11 +22,11 @@
 #import "MaplyImageTile_private.h"
 #import "MaplyRenderController_private.h"
 #import "MaplyQuadSampler_private.h"
-#import "MaplyBaseViewController_private.h"
 #import "MaplyRenderTarget_private.h"
 #import "visual_objects/MaplyScreenLabel.h"
 #import "MaplyRenderTarget_private.h"
 #import "MaplyRenderController_private.h"
+#import "MaplyQuadSampler_private.h"
 
 using namespace WhirlyKit;
 
@@ -39,6 +39,8 @@ using namespace WhirlyKit;
 
 - (void)addImageTile:(MaplyImageTile *)image
 {
+    if (!image)
+        return;
     loadReturn->images.push_back(image->imageTile);
 }
 
@@ -128,15 +130,18 @@ using namespace WhirlyKit;
     }
 }
 
+- (void)tileUnloaded:(MaplyTileID)tileID {
+}
+
 @end
 
 @implementation MaplyOvlDebugImageLoaderInterpreter
 {
-    MaplyBaseViewController * __weak viewC;
+    NSObject<MaplyRenderControllerProtocol>* __weak viewC;
     UIFont *font;
 }
 
-- (id)initWithViewC:(MaplyBaseViewController *)inViewC
+- (id)initWithViewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     self = [super init];
     viewC = inViewC;
@@ -181,10 +186,10 @@ using namespace WhirlyKit;
 
 @implementation MaplyDebugImageLoaderInterpreter
 {
-    MaplyBaseViewController * __weak viewC;
+    NSObject<MaplyRenderControllerProtocol> * __weak viewC;
 }
 
-- (instancetype)initWithViewC:(MaplyBaseViewController *)inViewC
+- (instancetype)initWithViewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     self = [super init];
     
@@ -244,7 +249,7 @@ static const int debugColors[MaxDebugColors] = {0x86812D, 0x5EB9C9, 0x2A7E3E, 0x
 
 @implementation MaplyQuadImageLoaderBase
 
-- (instancetype)initWithViewC:(MaplyBaseViewController *)inViewC
+- (instancetype)initWithViewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     self = [super initWithViewC:inViewC];
     
@@ -256,13 +261,9 @@ static const int debugColors[MaxDebugColors] = {0x86812D, 0x5EB9C9, 0x2A7E3E, 0x
     _imageFormat = MaplyImageIntRGBA;
     _borderTexel = 0;
     
-    MaplyQuadImageLoaderBase *strongSelf = self;
-    
     // Start things out after a delay
     // This lets the caller mess with settings
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [strongSelf delayedInit];
-    });
+    [self performSelector:@selector(delayedInit) withObject:nil afterDelay:0.0];
 
     return self;
 }
@@ -272,16 +273,16 @@ static const int debugColors[MaxDebugColors] = {0x86812D, 0x5EB9C9, 0x2A7E3E, 0x
     if (!valid)
         return false;
     
-    if (!self.viewC || !self.viewC->renderControl || !self.viewC->renderControl->scene)
+    if (!self.viewC || ![self.viewC getRenderControl])
         return false;
     
     if (!tileFetcher) {
-        tileFetcher = [self.viewC addTileFetcher:MaplyQuadImageLoaderFetcherName];
+        tileFetcher = [[self.viewC getRenderControl] addTileFetcher:MaplyQuadImageLoaderFetcherName];
     }
     loader->tileFetcher = tileFetcher;
     loader->setDebugMode(self.debugMode);
 
-    samplingLayer = [self.viewC findSamplingLayer:params forUser:self->loader];
+    samplingLayer = [[self.viewC getRenderControl] findSamplingLayer:params forUser:self->loader];
     // Do this again in case they changed them
     loader->setSamplingParams(params);
     
@@ -391,7 +392,7 @@ static const int debugColors[MaxDebugColors] = {0x86812D, 0x5EB9C9, 0x2A7E3E, 0x
 
 @implementation MaplyQuadImageLoader
 
-- (instancetype)initWithParams:(MaplySamplingParams *)inParams tileInfo:(NSObject<MaplyTileInfoNew> *)tileInfo viewC:(MaplyBaseViewController *)inViewC
+- (instancetype)initWithParams:(MaplySamplingParams *)inParams tileInfo:(NSObject<MaplyTileInfoNew> *)tileInfo viewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     if (!inParams.singleLevel) {
         NSLog(@"MaplyQuadImageLoader only supports samplers with singleLevel set to true");
@@ -419,7 +420,7 @@ static const int debugColors[MaxDebugColors] = {0x86812D, 0x5EB9C9, 0x2A7E3E, 0x
     return self;
 }
 
-- (instancetype)initWithParams:(MaplySamplingParams *)inParams tileInfos:(NSArray<NSObject<MaplyTileInfoNew> *> *)tileInfos viewC:(MaplyBaseViewController *)inViewC
+- (instancetype)initWithParams:(MaplySamplingParams *)inParams tileInfos:(NSArray<NSObject<MaplyTileInfoNew> *> *)tileInfos viewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     if (!inParams.singleLevel) {
         NSLog(@"MaplyQuadImageLoader only supports samplers with singleLevel set to true");

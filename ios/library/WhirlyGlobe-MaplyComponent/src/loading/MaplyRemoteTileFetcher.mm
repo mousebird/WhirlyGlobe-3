@@ -149,10 +149,11 @@ using namespace WhirlyKit;
     double spanY = wholeBBox.ur.y - wholeBBox.ll.y;
     double dx = spanX/numLevel, dy = spanY/numLevel;
     Point3d pts[4];
-    pts[0] = Point3d(wholeBBox.ll.x+dx*tileID.x,wholeBBox.ll.y+dy*tileID.y,0.0);
-    pts[1] = Point3d(wholeBBox.ll.x+dx*(tileID.x+1),wholeBBox.ll.y+dy*tileID.y,0.0);
-    pts[2] = Point3d(wholeBBox.ll.x+dx*(tileID.x+1),wholeBBox.ll.y+dy*(tileID.y+1),0.0);
-    pts[3] = Point3d(wholeBBox.ll.x+dx*tileID.x,wholeBBox.ll.y+dy*(tileID.y+1),0.0);
+    double nudge = spanX * 1e-7;   // Nudge things in a bit to avoid a round earth problem
+    pts[0] = Point3d(wholeBBox.ll.x+dx*tileID.x,wholeBBox.ll.y+dy*tileID.y,0.0) + Point3d(nudge,nudge,0.0);
+    pts[1] = Point3d(wholeBBox.ll.x+dx*(tileID.x+1),wholeBBox.ll.y+dy*tileID.y,0.0) + Point3d(-nudge,nudge,0.0);
+    pts[2] = Point3d(wholeBBox.ll.x+dx*(tileID.x+1),wholeBBox.ll.y+dy*(tileID.y+1),0.0) + Point3d(-nudge,-nudge,0.0);
+    pts[3] = Point3d(wholeBBox.ll.x+dx*tileID.x,wholeBBox.ll.y+dy*(tileID.y+1),0.0) + Point3d(nudge,-nudge,0.0);
 
     // Project the corners into our coordinate system
     MbrD tileMbr;
@@ -300,7 +301,7 @@ using namespace WhirlyKit;
     entry.wasCached = false;
     entry.queuedTime = tileInfo->startTime;
     entry.startedTime = tileInfo->startTime;
-    entry.finishedTime = CFAbsoluteTimeGetCurrent();
+    entry.finishedTime = TimeGetCurrent();
 
     @synchronized (self) {
         entries.push_back(entry);
@@ -316,7 +317,7 @@ using namespace WhirlyKit;
     entry.wasCached = false;
     entry.queuedTime = tileInfo->startTime;
     entry.startedTime = fetchStartTile;
-    entry.finishedTime = CFAbsoluteTimeGetCurrent();
+    entry.finishedTime = TimeGetCurrent();
 
     @synchronized (self) {
         entries.push_back(entry);
@@ -332,7 +333,7 @@ using namespace WhirlyKit;
     entry.wasCached = true;
     entry.queuedTime = tileInfo->startTime;
     entry.startedTime = tileInfo->startTime;
-    entry.finishedTime = CFAbsoluteTimeGetCurrent();
+    entry.finishedTime = TimeGetCurrent();
 
     @synchronized (self) {
         entries.push_back(entry);
@@ -347,7 +348,7 @@ using namespace WhirlyKit;
             [ret addObject:entry];
         }
         
-        self.endTime = CFAbsoluteTimeGetCurrent();
+        self.endTime = TimeGetCurrent();
         return ret;
     }
 }
@@ -457,14 +458,14 @@ using namespace WhirlyKit;
 - (void)startLogging
 {
     log = [[MaplyRemoteTileFetcherLog alloc] init];
-    log.startTime = CFAbsoluteTimeGetCurrent();
+    log.startTime = TimeGetCurrent();
 }
 
 - (MaplyRemoteTileFetcherLog *)stopLogging
 {
     if (log) {
         MaplyRemoteTileFetcherLog *retLog = log;
-        log.endTime = CFAbsoluteTimeGetCurrent();
+        log.endTime = TimeGetCurrent();
         log = nil;
         return retLog;
     }
@@ -515,7 +516,7 @@ using namespace WhirlyKit;
     allStats.totalRequests = allStats.totalRequests + requests.count;
     recentStats.totalRequests = recentStats.totalRequests + requests.count;
 
-    NSTimeInterval now = CFAbsoluteTimeGetCurrent();
+    NSTimeInterval now = TimeGetCurrent();
     
     for (MaplyTileFetchRequest *request in requests) {
         // Set up new request
