@@ -78,6 +78,9 @@ NSString* const kMaplyShader = MaplyShaderString;
 /// An NSDictionary containing uniforms to apply to a shader before drawing
 NSString* const kMaplyShaderUniforms = @"shaderuniforms";
 
+NSString* const kMaplyExtraFrames = @"extraFrames";
+
+
 /// Stars, moon, stars, atmosphere
 const int kMaplyStarsDrawPriorityDefault = 0;
 const int kMaplySunDrawPriorityDefault = 2;
@@ -300,6 +303,7 @@ NSString* const kMaplyMinFilterLinear = @"texfilterlinear";
 NSString* const kMaplyTexAtlas = @"texatlas";
 NSString* const kMaplyTexWrapX = @"texwrapx";
 NSString* const kMaplyTexWrapY = @"texwrapy";
+NSString* const kMaplyTexMipmap = @"texmipmap";
 
 /// These are the various shader programs we set up by default
 NSString* const kMaplyShaderDefaultTri = @"Default Triangle;lighting=yes";

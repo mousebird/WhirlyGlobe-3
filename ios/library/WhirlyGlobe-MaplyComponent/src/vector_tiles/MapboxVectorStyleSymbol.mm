@@ -117,6 +117,8 @@ public:
 
 @implementation MapboxVectorLayerSymbol
 {
+    NSString *uuidField;
+    MaplyVectorStyleSettings *styleSettings;
 }
 
 - (instancetype)initWithStyleEntry:(NSDictionary *)styleEntry parent:(MaplyMapboxVectorStyleLayer *)refLayer styleSet:(MapboxVectorStyleSet *)styleSet drawPriority:(int)drawPriority viewC:(NSObject<MaplyRenderControllerProtocol> *)viewC
@@ -124,6 +126,7 @@ public:
     self = [super initWithStyleEntry:styleEntry parent:refLayer styleSet:styleSet drawPriority:drawPriority viewC:viewC];
     if (!self)
         return nil;
+    styleSettings = styleSet.tileStyleSettings;
     
     _layout = [[MapboxVectorSymbolLayout alloc] initWithStyleEntry:styleEntry[@"layout"] styleSet:styleSet viewC:viewC];
     _paint = [[MapboxVectorSymbolPaint alloc] initWithStyleEntry:styleEntry[@"paint"] styleSet:styleSet viewC:viewC];
@@ -139,6 +142,8 @@ public:
         NSLog(@"Expecting paint in symbol layer.");
         return nil;
     }
+    
+    uuidField = styleSet.tileStyleSettings.uuidField;
         
     return self;
 }
@@ -230,10 +235,12 @@ public:
     }
     
     // TODO: They mean displayed level here, which is different from loaded level
-//    if (self.minzoom > tileInfo.tileID.level)
-//        return compObjs;
-//    if (self.maxzoom < tileInfo.tileID.level)
-//        return compObjs;
+    if (styleSettings.useZoomLevels) {
+      if (self.minzoom > tileInfo.tileID.level)
+          return;
+      if (self.maxzoom < tileInfo.tileID.level)
+          return;
+    }
     
     NSMutableDictionary *desc = [NSMutableDictionary dictionaryWithDictionary:
                   @{
@@ -303,7 +310,9 @@ public:
             NSLog(@"Failed to find text for label");
             continue;
         }
-        if (_uniqueLabel)
+        if (uuidField) {
+            label.uniqueID  = [vecObj.attributes objectForKey:uuidField];
+        } else if (_uniqueLabel)
             label.uniqueID = [label.text lowercaseString];
 
         // The rank is most important, followed by the zoom level.  This keeps the countries on top.

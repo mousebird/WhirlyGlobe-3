@@ -16,11 +16,11 @@ import com.mousebird.maply.VectorObject;
 import com.mousebird.maply.WideVectorInfo;
 import com.mousebirdconsulting.autotester.Framework.MaplyTestCase;
 
-import org.apache.commons.io.IOUtils;
-
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+
+import okio.Okio;
 
 public class WideVectorsTestCase extends MaplyTestCase {
     public WideVectorsTestCase(Activity activity) {
@@ -35,8 +35,8 @@ public class WideVectorsTestCase extends MaplyTestCase {
         // Build a dashed pattern
         LinearTextureBuilder texBuild = new LinearTextureBuilder();
         int[] pattern = new int[2];
-        pattern[0] = 4;
-        pattern[1] = 4;
+        pattern[0] = 8;
+        pattern[1] = 8;
         texBuild.setPattern(pattern);
         Bitmap patternImage = texBuild.makeImage();
         RenderController.TextureSettings texSet = new RenderController.TextureSettings();
@@ -45,9 +45,9 @@ public class WideVectorsTestCase extends MaplyTestCase {
 
         WideVectorInfo wideVecInfo = new WideVectorInfo();
         wideVecInfo.setColor(Color.BLUE);
-        wideVecInfo.setLineWidth(10.0f);
+        wideVecInfo.setLineWidth(20.0f);
         wideVecInfo.setTexture(tex);
-        wideVecInfo.setTextureRepeatLength(8.0);
+        wideVecInfo.setTextureRepeatLength(16.0);
 
         VectorInfo vecInfo = new VectorInfo();
         vecInfo.setLineWidth(4.0f);
@@ -57,7 +57,7 @@ public class WideVectorsTestCase extends MaplyTestCase {
 
         try {
             InputStream stream = getActivity().getAssets().open("wide_vecs/" + name);
-            String json = IOUtils.toString(stream, Charset.defaultCharset());
+            String json = Okio.buffer(Okio.source(stream)).readUtf8();
 
             VectorObject vecObj = new VectorObject();
             vecObj.fromGeoJSON(json);

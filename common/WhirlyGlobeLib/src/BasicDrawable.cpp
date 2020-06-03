@@ -83,8 +83,9 @@ bool BasicDrawable::isOn(RendererFrameInfo *frameInfo) const
 {
     if (startEnable != endEnable)
     {
-        if (frameInfo->currentTime < startEnable ||
-            endEnable < frameInfo->currentTime)
+        if (frameInfo->currentTime < startEnable)
+            return false;
+        if (endEnable != 0.0 && endEnable < frameInfo->currentTime)
             return false;
     }
     
@@ -121,54 +122,6 @@ void BasicDrawable::setOnOff(bool onOff)
 bool BasicDrawable::hasMotion() const
 {
     return motion;
-}
-
-bool BasicDrawable::hasAlpha(RendererFrameInfo *frameInfo) const
-{
-    if (isAlpha)
-        return true;
-    
-    // We don't need to get tricky unless we're z buffering this data
-    if (!requestZBuffer)
-        return false;
-    
-    if (fadeDown < fadeUp)
-    {
-        // Heading to 1
-        if (frameInfo->currentTime < fadeDown)
-            return false;
-        else
-            if (frameInfo->currentTime > fadeUp)
-                return false;
-            else
-                return true;
-    } else
-        if (fadeUp < fadeDown)
-        {
-            // Heading to 0
-            if (frameInfo->currentTime < fadeUp)
-                return false;
-            else
-                if (frameInfo->currentTime > fadeDown)
-                    return false;
-                else
-                    return true;
-        }
-    
-    WhirlyGlobe::GlobeView *globeView = dynamic_cast<WhirlyGlobe::GlobeView *>(frameInfo->theView);
-    if ((minVisibleFadeBand != 0.0 || maxVisibleFadeBand != 0.0) && globeView)
-    {
-        float height = globeView->heightAboveSurface();
-        if (height > minVisible && height < minVisible + minVisibleFadeBand)
-        {
-            return true;
-        } else if (height > maxVisible - maxVisibleFadeBand && height < maxVisible)
-        {
-            return true;
-        }
-    }
-    
-    return false;
 }
 
 Mbr BasicDrawable::getLocalMbr() const
@@ -261,17 +214,17 @@ void BasicDrawable::updateRenderer(SceneRenderer *renderer)
     renderer->setRenderUntil(fadeUp);
     renderer->setRenderUntil(fadeDown);
     
-    if (motion)
+    if (startEnable != endEnable)
     {
-        if (startEnable != endEnable)
-        {
-            // Note: This still means we'll render until startEnable
-            renderer->setRenderUntil(endEnable);
-        } else {
-            // Motion requires continuous rendering
-            renderer->addContinuousRenderRequest(getId());
-        }
+        // Note: This still means we'll render until endEnable
+        renderer->setRenderUntil(startEnable);
+        renderer->setRenderUntil(endEnable);
+    } else if (motion) {
+        // Motion requires continuous rendering
+        renderer->addContinuousRenderRequest(getId());
     }
+    if (extraFrames > 0)
+        renderer->addExtraFrameRenderRequest(getId(), extraFrames);
 }
 
 SimpleIdentity BasicDrawable::getCalculationProgram() const
@@ -509,6 +462,8 @@ DrawPriorityChangeRequest::DrawPriorityChangeRequest(SimpleIdentity drawId,int d
 
 void DrawPriorityChangeRequest::execute2(Scene *scene,SceneRenderer *renderer,DrawableRef draw)
 {
+    renderer->removeDrawable(draw,false);
+
     BasicDrawableRef basicDrawable = std::dynamic_pointer_cast<BasicDrawable>(draw);
     if (basicDrawable)
         basicDrawable->setDrawPriority(drawPriority);
@@ -517,6 +472,8 @@ void DrawPriorityChangeRequest::execute2(Scene *scene,SceneRenderer *renderer,Dr
         if (basicDrawInst)
             basicDrawInst->setDrawPriority(drawPriority);
     }
+
+    renderer->addDrawable(draw);
 }
 
 LineWidthChangeRequest::LineWidthChangeRequest(SimpleIdentity drawId,float lineWidth)
@@ -560,6 +517,8 @@ RenderTargetChangeRequest::RenderTargetChangeRequest(SimpleIdentity drawID,Simpl
     
 void RenderTargetChangeRequest::execute2(Scene *scene,SceneRenderer *renderer,DrawableRef draw)
 {
+    renderer->removeDrawable(draw,false);
+    
     BasicDrawableRef basicDrawable = std::dynamic_pointer_cast<BasicDrawable>(draw);
     if (basicDrawable)
         basicDrawable->setRenderTarget(targetID);
@@ -573,6 +532,8 @@ void RenderTargetChangeRequest::execute2(Scene *scene,SceneRenderer *renderer,Dr
                 partDrawable->setRenderTarget(targetID);
         }
     }
+    
+    renderer->addDrawable(draw);
 }
     
 UniformBlockSetRequest::UniformBlockSetRequest(SimpleIdentity drawID,const RawDataRef &uniData,int bufferID)

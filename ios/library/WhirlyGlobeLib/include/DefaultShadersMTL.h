@@ -69,6 +69,9 @@ struct Uniforms
     simd::float4x4 mvNormalMatrix;
     simd::float3 eyePos;
     simd::float2 pixDispSize;  // Size of a single pixel in display coordinates
+    simd::float2 frameSize;    // Output framebuffer size
+    uint frameCount;            // Starts at zero and goes up from there every frame
+    int outputTexLevel;        // Normally 0, unless we're running a reduce
     bool globeMode;
 };
 
@@ -169,7 +172,10 @@ struct VertexTriModelInstance
     simd::float3 center;
     simd::float3 dir;
 };
-    
+// If we're using the indirect instancing (can be driven by the GPU) this is
+//  where the indirect buffer lives
+#define WKSInstanceIndirectBuffer 17
+
 #define WKSUniformDrawStateBillboardBuffer 15
 // Instructions to the billboard shaders, per-drawable
 struct UniformBillboard {

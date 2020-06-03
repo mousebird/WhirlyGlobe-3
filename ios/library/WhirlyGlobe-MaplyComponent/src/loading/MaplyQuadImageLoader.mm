@@ -73,6 +73,11 @@ using namespace WhirlyKit;
     return ret;
 }
 
+- (void)clearImages
+{
+    loadReturn->images.clear();
+}
+
 - (void)addCompObjs:(NSArray<MaplyComponentObject *> *)compObjs
 {
     for (MaplyComponentObject *compObj in compObjs)
@@ -91,6 +96,11 @@ using namespace WhirlyKit;
     return ret;
 }
 
+- (void)clearCompObjs
+{
+    loadReturn->compObjs.clear();
+}
+
 - (void)addOvlCompObjs:(NSArray<MaplyComponentObject *> *)compObjs
 {
     for (MaplyComponentObject *compObj in compObjs)
@@ -107,6 +117,11 @@ using namespace WhirlyKit;
     }
     
     return ret;
+}
+
+- (void)clearOvlCompObjs
+{
+    loadReturn->ovlCompObjs.clear();
 }
 
 @end
@@ -328,6 +343,15 @@ static const int debugColors[MaxDebugColors] = {0x86812D, 0x5EB9C9, 0x2A7E3E, 0x
             break;
         case MaplyImageQuadFloat32:
             loader->setTexType(TexTypeQuadFloat32);
+            break;
+        case MaplyImageUInt32:
+            loader->setTexType(TexTypeSingleUInt32);
+            break;
+        case MaplyImageDoubleUInt32:
+            loader->setTexType(TexTypeDoubleUInt32);
+            break;
+        case MaplyImageQuadUInt32:
+            loader->setTexType(TexTypeQuadUInt32);
             break;
     }
     

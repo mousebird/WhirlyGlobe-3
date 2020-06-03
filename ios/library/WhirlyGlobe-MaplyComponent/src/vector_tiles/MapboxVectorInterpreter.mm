@@ -67,7 +67,7 @@ static int BackImageWidth = 16, BackImageHeight = 16;
 
 - (instancetype) initWithImageStyle:(MapboxVectorStyleSet *)inImageStyle
                       offlineRender:(MaplyRenderController *)inOfflineRender
-                        vectorStyle:(NSObject<MaplyVectorStyleDelegate> *)inVectorStyle
+                        vectorStyle:(MapboxVectorStyleSet *)inVectorStyle
                               viewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     self = [super init];
@@ -88,7 +88,7 @@ static int BackImageWidth = 16, BackImageHeight = 16;
     return self;
 }
 
-- (instancetype) initWithVectorStyle:(NSObject<MaplyVectorStyleDelegate> *)inVectorStyle
+- (instancetype) initWithVectorStyle:(MapboxVectorStyleSet *)inVectorStyle
                                viewC:(NSObject<MaplyRenderControllerProtocol> *)inViewC
 {
     self = [super init];
@@ -96,6 +96,12 @@ static int BackImageWidth = 16, BackImageHeight = 16;
     viewC = inViewC;
     
     vecTileParser = MapboxVectorTileParser_iOSRef(new MapboxVectorTileParser_iOS(vecStyle,viewC));
+    
+    if ([vecStyle isKindOfClass:[MapboxVectorStyleSet class]]) {
+        MapboxVectorStyleSet *mbStyleSet = (MapboxVectorStyleSet *)vecStyle;
+        MapboxVectorLayerBackground *backLayer = mbStyleSet.layersByName[@"background"];
+        backColor = backLayer.paint.color;
+    }
     
     return self;
 }
@@ -202,8 +208,8 @@ static int BackImageWidth = 16, BackImageHeight = 16;
             }
             
             NSArray *compObjs = [vecTileReturn componentObjects];
-            if (!loadReturn.error && compObjs) {
-                
+            if (!loadReturn.error && [compObjs count] > 0) {
+
                 // Turn all those objects on
                 [offlineRender enableObjects:compObjs mode:MaplyThreadCurrent];
                 

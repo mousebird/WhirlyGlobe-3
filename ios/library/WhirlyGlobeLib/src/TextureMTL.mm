@@ -209,6 +209,17 @@ bool TextureMTL::createInRenderer(const RenderSetupInfo *inSetupInfo)
             pixFormat = MTLPixelFormatDepth32Float;
             bytesPerRow = 4*width;
             break;
+        case TexTypeSingleUInt32:
+            pixFormat = MTLPixelFormatR32Uint;
+            bytesPerRow = 4*width;
+            break;
+        case TexTypeDoubleUInt32:
+            pixFormat = MTLPixelFormatRG32Uint;
+            bytesPerRow = 8*width;
+            break;
+        case TexTypeQuadUInt32:
+            pixFormat = MTLPixelFormatRGBA32Uint;
+            bytesPerRow = 16*width;
     }
     
     // Set up the texture and upload the data
@@ -217,7 +228,17 @@ bool TextureMTL::createInRenderer(const RenderSetupInfo *inSetupInfo)
     // If there's no data, then we're using this as a target
     if (!texData) {
         desc.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+#if TARGET_OS_SIMULATOR
+        if (pixFormat != MTLPixelFormatDepth32Float)
+            desc.storageMode = MTLStorageModeShared;
+        else
+            desc.storageMode = MTLStorageModePrivate;
+#endif
     }
+    
+    // If there are mipmaps, we probably expect to write to them
+    if (usesMipmaps)
+        desc.usage |= MTLTextureUsageShaderWrite;
     
     mtlID = [setupInfo->mtlDevice newTextureWithDescriptor:desc];
     if (!name.empty())

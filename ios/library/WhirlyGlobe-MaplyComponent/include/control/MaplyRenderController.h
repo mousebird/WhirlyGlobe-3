@@ -55,7 +55,8 @@ typedef NS_ENUM(NSInteger, MaplyQuadImageFormat) {
     MaplyImageEACR11,MaplyImageEACR11S,MaplyImageEACRG11,MaplyImageEACRG11S,
     MaplyImage4Layer8Bit,
     // Metal only
-    MaplyImageSingleFloat16,MaplyImageSingleFloat32,MaplyImageDoubleFloat16,MaplyImageDoubleFloat32,MaplyImageQuadFloat16,MaplyImageQuadFloat32
+    MaplyImageSingleFloat16,MaplyImageSingleFloat32,MaplyImageDoubleFloat16,MaplyImageDoubleFloat32,MaplyImageQuadFloat16,MaplyImageQuadFloat32,
+    MaplyImageUInt32,MaplyImageDoubleUInt32,MaplyImageQuadUInt32
 };
 
 /// Wrap values for certain types of textures
@@ -708,7 +709,6 @@ typedef NS_ENUM(NSInteger, MaplyRenderType) {
  |kMaplyTexWrapY|NSNumber boolean|Texture wraps in y direction.  Off by default.|
  |kMaplyTexAtlas|NSNumber boolean|If set, the texture goes into an appropriate atlas.  If not set, it's a standalone texture (default).|
  
- 
  @param threadMode For MaplyThreadAny we'll do the add on another thread.  For MaplyThreadCurrent we'll block the current thread to finish the add.  MaplyThreadAny is preferred.
  */
 - (MaplyTexture *__nullable)addTexture:(UIImage *__nonnull)image desc:(NSDictionary *__nullable)desc mode:(MaplyThreadMode)threadMode;
@@ -728,7 +728,7 @@ typedef NS_ENUM(NSInteger, MaplyRenderType) {
  |kMaplyTexWrapX|NSNumber boolean|Texture wraps in x direction.  Off by default.|
  |kMaplyTexWrapY|NSNumber boolean|Texture wraps in y direction.  Off by default.|
  |kMaplyTexAtlas|NSNumber boolean|If set, the texture goes into an appropriate atlas.  If not set, it's a standalone texture (default).|
- 
+ |kMaplyTexMipmap|NSNumber boolean|If set, we'll create the given texture with mipmap levels.|
  
  @param sizeX The horizontal size of the textures (in pixels).
  

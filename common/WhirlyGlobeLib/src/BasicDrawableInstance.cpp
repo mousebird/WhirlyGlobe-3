@@ -29,11 +29,17 @@ namespace WhirlyKit
 {
 
 BasicDrawableInstance::BasicDrawableInstance(const std::string &name)
-: Drawable(name)
+: Drawable(name), instanceTexSource(EmptyIdentity), instanceTexProg(EmptyIdentity)
 {
 }
     
 BasicDrawableInstance::~BasicDrawableInstance()
+{
+}
+
+BasicDrawableInstance::TexInfo::TexInfo(BasicDrawable::TexInfo &basicTexInfo)
+: texId(basicTexInfo.texId), size(basicTexInfo.size), borderTexel(basicTexInfo.borderTexel),
+relLevel(basicTexInfo.relLevel), relX(basicTexInfo.relX), relY(basicTexInfo.relY)
 {
 }
 
@@ -81,11 +87,12 @@ bool BasicDrawableInstance::isOn(WhirlyKit::RendererFrameInfo *frameInfo) const
 {
     if (startEnable != endEnable)
     {
-        if (frameInfo->currentTime < startEnable ||
-            endEnable < frameInfo->currentTime)
+        if (frameInfo->currentTime < startEnable)
+            return false;
+        if (endEnable != 0.0 && endEnable < frameInfo->currentTime)
             return false;
     }
-    
+
     if (!enable)
         return false;
     
@@ -109,11 +116,6 @@ bool BasicDrawableInstance::isOn(WhirlyKit::RendererFrameInfo *frameInfo) const
     }
     
     return true;
-}
-
-bool BasicDrawableInstance::hasAlpha(WhirlyKit::RendererFrameInfo *frameInfo) const
-{
-    return basicDraw->hasAlpha(frameInfo);
 }
     
 void BasicDrawableInstance::setRequestZBuffer(bool val)
@@ -149,7 +151,7 @@ void BasicDrawableInstance::updateRenderer(WhirlyKit::SceneRenderer *renderer)
     
 SimpleIdentity BasicDrawableInstance::getCalculationProgram() const
 {
-    return EmptyIdentity;
+    return instanceTexProg;
 }
     
 void BasicDrawableInstance::setEnable(bool newEnable)

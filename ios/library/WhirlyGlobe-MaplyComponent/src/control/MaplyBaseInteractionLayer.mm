@@ -278,6 +278,7 @@ public:
     bool wrapX = [desc boolForKey:kMaplyTexWrapX default:false];
     bool wrapY = [desc boolForKey:kMaplyTexWrapY default:false];
     int magFilter = [desc enumForKey:kMaplyTexMagFilter values:@[kMaplyMinFilterNearest,kMaplyMinFilterLinear] default:0];
+    bool mipmap = [desc boolForKey:kMaplyTexMipmap default:false];
     
     int imgWidth,imgHeight;
     if (image)
@@ -315,7 +316,7 @@ public:
         }
     }
     tex->setWrap(wrapX, wrapY);
-    tex->setUsesMipmaps(false);
+    tex->setUsesMipmaps(mipmap);
     tex->setInterpType(magFilter == 0 ? TexInterpNearest : TexInterpLinear);
     switch (imageFormat)
     {
@@ -370,6 +371,15 @@ public:
             break;
         case MaplyImageQuadFloat32:
             tex->setFormat(TexTypeQuadFloat32);
+            break;
+        case MaplyImageUInt32:
+            tex->setFormat(TexTypeSingleUInt32);
+            break;
+        case MaplyImageDoubleUInt32:
+            tex->setFormat(TexTypeDoubleUInt32);
+            break;
+        case MaplyImageQuadUInt32:
+            tex->setFormat(TexTypeQuadUInt32);
             break;
     }
 
@@ -828,7 +838,10 @@ public:
         if (texs.size() > 1)
             wgMarker->period = marker.period;
         compObj->contents->texs.insert(texs.begin(),texs.end());
-        wgMarker->color = [marker.color asRGBAColor];
+        if (marker.color) {
+            wgMarker->color = [marker.color asRGBAColor];
+            wgMarker->colorSet = true;
+        }
         if (!texs.empty())
         {
             for (unsigned int ii=0;ii<texs.size();ii++)
@@ -2171,26 +2184,33 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
 
     // Sort the instances with their models
     GeomModelInstancesSet instSort;
-    for (MaplyGeomModelInstance *mInst in modelInstances)
+    std::vector<MaplyGeomModelGPUInstance *> gpuInsts;
+    for (id theInst in modelInstances)
     {
-        if (mInst.model)
-        {
-            GeomModelInstances searchInst(mInst.model);
-            GeomModelInstancesSet::iterator it = instSort.find(&searchInst);
-            if (it != instSort.end())
+        if ([theInst isKindOfClass:[MaplyGeomModelInstance class]]) {
+            MaplyGeomModelInstance *mInst = theInst;
+            if (mInst.model)
             {
-                (*it)->instances.push_back(mInst);
-            } else {
-                GeomModelInstances *newInsts = new GeomModelInstances(mInst.model);
-                newInsts->instances.push_back(mInst);
-                instSort.insert(newInsts);
+                GeomModelInstances searchInst(mInst.model);
+                GeomModelInstancesSet::iterator it = instSort.find(&searchInst);
+                if (it != instSort.end())
+                {
+                    (*it)->instances.push_back(mInst);
+                } else {
+                    GeomModelInstances *newInsts = new GeomModelInstances(mInst.model);
+                    newInsts->instances.push_back(mInst);
+                    instSort.insert(newInsts);
+                }
             }
+        } else if ([theInst isKindOfClass:[MaplyGeomModelGPUInstance class]]) {
+            gpuInsts.push_back(theInst);
         }
     }
     
     // Add each model with its group of instances
     if (geomManager)
     {
+        // Regular geometry instances
         ChangeSet changes;
         for (auto it : instSort)
         {
@@ -2294,6 +2314,32 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
                 if (geomID != EmptyIdentity)
                     compObj->contents->geomIDs.insert(geomID);
             }
+        }
+        
+        // GPU Geometry Instances
+        for (auto geomInst : gpuInsts) {
+            // Set up the textures and convert the geometry
+            MaplyGeomModel *model = geomInst.model;
+            
+            // Return an existing base model or make a new one
+            SimpleIdentity baseModelID = [model getBaseModel:self fontTexManager:fontTexManager compObj:compObj mode:threadMode];
+            
+            // Reference count the textures for this comp obj
+            compObj->contents->texs.insert(model->maplyTextures.begin(),model->maplyTextures.end());
+
+            SimpleIdentity programID = EmptyIdentity;
+            if (geomInst.shader && geomInst.shader.program)
+                programID = geomInst.shader.program->getId();
+            SimpleIdentity srcTexID = EmptyIdentity;
+            if (geomInst.numInstSource)
+                srcTexID = geomInst.numInstSource.texID;
+            SimpleIdentity srcProgramID = EmptyIdentity;
+            if (geomInst.numInstShader)
+                srcProgramID = geomInst.numInstShader.program->getId();
+            
+            SimpleIdentity geomID = geomManager->addGPUGeomInstance(baseModelID, programID, srcTexID, srcProgramID, geomInfo, changes);
+            if (geomID != EmptyIdentity)
+                compObj->contents->geomIDs.insert(geomID);
         }
         
         [self flushChanges:changes mode:threadMode];
@@ -3134,7 +3180,9 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
                                              renderTarget.clearEveryFrame,
                                              renderTarget.blend,
                                              [renderTarget.clearColor asRGBAColor],
-                                             renderTarget.clearVal));
+                                             renderTarget.clearVal,
+                                             (RenderTargetMipmapType)renderTarget.mipmapType,
+                                             renderTarget.calculateMinMax));
     
     [self flushChanges:changes mode:MaplyThreadCurrent];
 }
