@@ -44,6 +44,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     BaseInfo();
+    BaseInfo(const BaseInfo &that);
     BaseInfo(const Dictionary &dict);
     
     // Convert contents to a string for debugging
@@ -76,5 +77,6 @@ public:
     
     SingleVertexAttributeSet uniforms;
 };
+typedef std::shared_ptr<BaseInfo> BaseInfoRef;
 
 }

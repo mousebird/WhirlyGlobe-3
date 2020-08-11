@@ -55,14 +55,9 @@ using namespace WhirlyKit;
     return tileID;
 }
 
-- (void)setFrame:(int)frame
-{
-    loadReturn->frame = frame;
-}
-
 - (int)frame
 {
-    return loadReturn->frame;
+    return loadReturn->frame->frameIndex;
 }
 
 - (void)addTileData:(id __nonnull) inTileData
@@ -243,9 +238,12 @@ using namespace WhirlyKit;
         [self performSelector:@selector(changeTileInfos:) onThread:samplingLayer.layerThread withObject:tileInfos waitUntilDone:false];
         return;
     }
+
     
+    ChangeSet changes;
     loader->setTileInfos(tileInfos);
-    loader->reload(-1);
+    loader->reload(NULL,-1,changes);
+    [samplingLayer.layerThread addChangeRequests:changes];
 }
 
 - (void)changeInterpreter:(NSObject<MaplyLoaderInterpreter> *)interp
@@ -258,8 +256,10 @@ using namespace WhirlyKit;
         return;
     }
     
+    ChangeSet changes;
     loadInterp = interp;
-    loader->reload(-1);
+    loader->reload(NULL,-1,changes);
+    [samplingLayer.layerThread addChangeRequests:changes];
 }
 
 - (void)reload
@@ -272,7 +272,9 @@ using namespace WhirlyKit;
         return;
     }
 
-    loader->reload(-1);
+    ChangeSet changes;
+    loader->reload(NULL,-1,changes);
+    [samplingLayer.layerThread addChangeRequests:changes];
 }
 
 // Called on a random dispatch queue
@@ -288,11 +290,11 @@ using namespace WhirlyKit;
     if ([data isKindOfClass:[MaplyLoaderReturn class]]) {
         loadData = data;
         loadData.tileID = tileID;
-        loadData.frame = frame;
+        loadData->loadReturn->frame = loader->getFrameInfo(frame);
     } else {
         loadData = [self makeLoaderReturn];
         loadData.tileID = tileID;
-        loadData.frame = frame;
+        loadData->loadReturn->frame = loader->getFrameInfo(frame);
         if ([data isKindOfClass:[NSData class]]) {
             [loadData addTileData:data];
         } else if (data != nil) {
@@ -335,7 +337,7 @@ using namespace WhirlyKit;
     // Don't actually want this one
     if (!loader->isFrameLoading(tileID,loadReturn->loadReturn->frame)) {
         if (_debugMode)
-            NSLog(@"MaplyQuadImageLoader: Dropping fetched tile %d: (%d,%d) frame %d",tileID.level,tileID.x,tileID.y,loadReturn->loadReturn->frame);
+            NSLog(@"MaplyQuadImageLoader: Dropping fetched tile %d: (%d,%d) frame %d",tileID.level,tileID.x,tileID.y,loadReturn->loadReturn->frame->frameIndex);
         return;
     }
     
@@ -348,7 +350,9 @@ using namespace WhirlyKit;
         // In this mode we need to adjust the loader return to contain everything at once
         if (loader->getMode() == QuadImageFrameLoader::SingleFrame && loader->getNumFrames() > 1) {
             loadReturn->tileData.clear();
-            loadReturn->loadReturn->frame = 0;
+            loadReturn->loadReturn->frame = QuadFrameInfoRef(new QuadFrameInfo());
+            loadReturn->loadReturn->frame->setId(loader->getFrameInfo(0)->getId());
+            loadReturn->loadReturn->frame->frameIndex = 0;
             for (auto data : allData) {
                 RawNSDataReader *rawData = dynamic_cast<RawNSDataReader *>(data.get());
                 if (rawData) {
@@ -378,7 +382,11 @@ using namespace WhirlyKit;
         return;
     
     ChangeSet changes;
-    loader->mergeLoadedTile(loadReturn->loadReturn.get(),changes);
+    if (!loadReturn->loadReturn->changes.empty()) {
+        [samplingLayer.layerThread addChangeRequests:loadReturn->loadReturn->changes];
+        loadReturn->loadReturn->changes.clear();
+    }
+    loader->mergeLoadedTile(NULL,loadReturn->loadReturn.get(),changes);
     
     [samplingLayer.layerThread addChangeRequests:changes];
 }
@@ -387,7 +395,7 @@ using namespace WhirlyKit;
 {
     ChangeSet changes;
     
-    loader->cleanup(changes);
+    loader->cleanup(NULL,changes);
     [samplingLayer.layerThread addChangeRequests:changes];
     
     loader = nil;
