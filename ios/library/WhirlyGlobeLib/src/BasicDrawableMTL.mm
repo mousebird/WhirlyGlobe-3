@@ -246,6 +246,11 @@ MTLVertexDescriptor *BasicDrawableMTL::getVertexDescriptor(id<MTLFunction> vertF
             defAttr.dataType = vertAttrMTL.attributeType;
             defAttr.bufferIndex = vertAttrMTL.attributeIndex;
             switch (vertAttrMTL.attributeType) {
+                case MTLDataTypeNone:
+                    // Note: It's not clear why this is happening
+                    attrDesc.format = MTLVertexFormatFloat2;
+                    layoutDesc.stride = 8;
+                    break;
                 case MTLDataTypeFloat:
                     attrDesc.format = MTLVertexFormatFloat;
                     layoutDesc.stride = 4;
