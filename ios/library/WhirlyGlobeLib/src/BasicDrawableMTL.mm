@@ -341,6 +341,8 @@ void BasicDrawableMTL::draw(RendererFrameInfoMTL *frameInfo,id<MTLRenderCommandE
     float fade = calcFade(frameInfo);
     
     id<MTLRenderPipelineState> renderState = getRenderPipelineState(sceneRender,frameInfo);
+    if (!renderState)
+        return;
     
     // Wire up the various inputs that we know about
     for (auto vertAttr : vertexAttributes) {
@@ -428,6 +430,8 @@ void BasicDrawableMTL::draw(RendererFrameInfoMTL *frameInfo,id<MTLRenderCommandE
             [cmdEncode drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:numPts];
             break;
         case Triangles:
+            if (numTris == 0)
+                return;
             // This actually draws the triangles (well, in a bit)
             [cmdEncode drawIndexedPrimitives:MTLPrimitiveTypeTriangle indexCount:numTris*3 indexType:MTLIndexTypeUInt16 indexBuffer:triBuffer indexBufferOffset:0];
             break;

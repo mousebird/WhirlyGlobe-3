@@ -235,6 +235,8 @@ void ParticleSystemDrawableMTL::draw(RendererFrameInfoMTL *frameInfo,id<MTLRende
     
     // Render state is pretty simple, so apply that
     id<MTLRenderPipelineState> renderState = getRenderPipelineState(sceneRender,frameInfo);
+    if (!renderState)
+        return;
     [cmdEncode setRenderPipelineState:renderState];
     
     // Pass in the textures (and offsets)

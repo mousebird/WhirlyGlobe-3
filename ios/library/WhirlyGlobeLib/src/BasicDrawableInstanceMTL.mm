@@ -225,6 +225,8 @@ void BasicDrawableInstanceMTL::draw(RendererFrameInfoMTL *frameInfo,id<MTLRender
         return;
 
     id<MTLRenderPipelineState> renderState = getRenderPipelineState(sceneRender,frameInfo,basicDrawMTL);
+    if (!renderState)
+        return;
     
     // Wire up the various inputs that we know about
     // TODO: Some of these we need to override
