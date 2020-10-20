@@ -60,7 +60,9 @@ public:
     WorkRegion(NSObject<MaplyRenderControllerProtocol>* renderController)
     {
         if (renderController) {
-            auto layer = [renderController getRenderControl]->interactLayer;
+            // Use the result of getRenderControl, if any, but keep reference to the original.
+            const auto rc = [renderController getRenderControl];
+            const auto layer = (rc ? rc->interactLayer : nil);
             if (layer && [layer startOfWork]) {
                 _layer = layer;
                 _render = renderController;

@@ -631,7 +631,7 @@ static const float PerfOutputDelay = 15.0;
 
 - (MaplyComponentObject *)addSelectionVectors:(NSArray *)vectors
 {
-    if (auto wr = WorkRegion(renderControl->interactLayer)) {
+    if (auto wr = WorkRegion(renderControl)) {
         return [renderControl->interactLayer addSelectionVectors:vectors desc:nil];
     }
     return nil;
@@ -1067,14 +1067,14 @@ static const float PerfOutputDelay = 15.0;
 
 - (void)startChanges
 {
-    if (auto wr = WorkRegion(renderControl->interactLayer)) {
+    if (auto wr = WorkRegion(renderControl)) {
         [renderControl->interactLayer startChanges];
     }
 }
 
 - (void)endChanges
 {
-    if (auto wr = WorkRegion(renderControl->interactLayer)) {
+    if (auto wr = WorkRegion(renderControl)) {
         [renderControl->interactLayer endChanges];
     }
 }
