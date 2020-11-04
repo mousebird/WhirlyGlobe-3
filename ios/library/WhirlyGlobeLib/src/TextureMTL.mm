@@ -234,6 +234,11 @@ bool TextureMTL::createInRenderer(const RenderSetupInfo *inSetupInfo)
         else
             desc.storageMode = MTLStorageModePrivate;
 #endif
+        // We need to set this so we can read data back out
+        // TODO: Figure out how to let reading happen without doing this.  Maybe a copy?
+        if (@available(iOS 12.0, *)) {
+            desc.allowGPUOptimizedContents = false;
+        }
     }
     
     // If there are mipmaps, we probably expect to write to them
